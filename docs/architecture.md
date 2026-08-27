@@ -47,20 +47,18 @@ server/src/
 └── services/         # 健康评分、AI 建议等业务逻辑
 ```
 
-## 4. 本地存储与云同步
+## 4. 数据存储与账号（Supabase）
 
-数据默认写入 IndexedDB（`idb.ts`）。`repository.ts` 在每次写操作后，
-把变更推入 `sync_queue`；`sync.ts` 暴露：
+当前架构为**在线账号版**：
 
-```ts
-interface SyncAdapter {
-  push(queue: SyncItem[]): Promise<void>;
-  pull(since: number): Promise<RemoteChange[]>;
-}
-```
+- 账号：Supabase Auth，邮箱注册/登录、密码校验、会话管理。
+- 数据库：Supabase Postgres，业务表见 `supabase/migrations/0001_init.sql`。
+- 数据隔离：所有表带 `user_id`（默认 `auth.uid()`）并启用 RLS，
+  每个用户只能读写自己的行。
+- 前端读写统一走 `client/src/lib/cloudRepo.ts`，页面不直接接触 SDK。
 
-当前默认使用 `LocalOnlyAdapter`（空实现），未来替换为调用 `server` 的
-`REST` 适配器即可，业务层无需改动。
+早期“本地 IndexedDB + 同步队列”的实现保留在 `client/src/lib/idb.ts`、
+`repository.ts`、`sync.ts` 中，作为离线场景的参考实现。
 
 ## 5. AI 服务抽象
 

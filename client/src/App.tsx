@@ -1,9 +1,11 @@
-// 应用入口：路由与布局。底部导航常驻，AI 悬浮入口由 BottomNav 提供。
+// 应用入口：未登录时显示注册/登录页，登录后进入主界面。
 import { Outlet, Route, Routes } from 'react-router-dom';
 import { BottomNav } from './components/BottomNav';
 import { EasterEgg } from './components/EasterEgg';
+import { useApp } from './context/AppContext';
 import { ActivityPage } from './pages/ActivityPage';
 import { AiCompanionPage } from './pages/AiCompanionPage';
+import { AuthPage } from './pages/AuthPage';
 import { DailyCarePage } from './pages/DailyCarePage';
 import { GrowthPage } from './pages/GrowthPage';
 import { HealthPage } from './pages/HealthPage';
@@ -23,6 +25,28 @@ function Layout() {
 }
 
 export default function App() {
+  const { user, authLoading } = useApp();
+
+  if (authLoading) {
+    return (
+      <div className="app-shell">
+        <div className="empty-state" style={{ paddingTop: '42vh' }}>
+          <span className="empty-icon">🐹</span>
+          正在加载…
+        </div>
+      </div>
+    );
+  }
+
+  if (!user) {
+    return (
+      <div className="app-shell">
+        <AuthPage />
+        <EasterEgg />
+      </div>
+    );
+  }
+
   return (
     <div className="app-shell">
       <Routes>

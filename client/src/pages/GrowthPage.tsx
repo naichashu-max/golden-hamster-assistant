@@ -8,6 +8,7 @@ import { useApp } from '../context/AppContext';
 import { WEIGHT_STATUS_LABELS } from '../lib/constants';
 import { formatDate, formatNumber, todayStr } from '../lib/format';
 import { STORES } from '../lib/idb';
+import { fileToResizedDataUrl } from '../lib/image';
 import type { WeightStatus } from '../types';
 
 export function GrowthPage() {
@@ -46,12 +47,14 @@ export function GrowthPage() {
     setWeightForm((prev) => ({ ...prev, weight: '', bodyLength: '', note: '' }));
   };
 
-  const onPhotoChange = (event: ChangeEvent<HTMLInputElement>) => {
+  const onPhotoChange = async (event: ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
     if (!file) return;
-    const reader = new FileReader();
-    reader.onload = () => setPhotoData(String(reader.result ?? ''));
-    reader.readAsDataURL(file);
+    try {
+      setPhotoData(await fileToResizedDataUrl(file));
+    } catch {
+      // 图片处理失败时保持原状
+    }
   };
 
   const handleAddPhoto = async (event: FormEvent) => {
@@ -201,7 +204,12 @@ export function GrowthPage() {
           </div>
           <label className="btn btn-ghost btn-block" style={{ marginBottom: 10 }}>
             {photoData ? '已选择照片，点击重新选择' : '选择照片'}
-            <input type="file" accept="image/*" style={{ display: 'none' }} onChange={onPhotoChange} />
+            <input
+              type="file"
+              accept="image/*"
+              style={{ display: 'none' }}
+              onChange={(event) => void onPhotoChange(event)}
+            />
           </label>
           <button className="btn btn-primary btn-block" type="submit" disabled={!photoData}>
             上传照片

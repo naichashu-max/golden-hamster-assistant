@@ -5,6 +5,7 @@ import { useNavigate, useParams } from 'react-router-dom';
 import { Card } from '../components/Card';
 import { useApp } from '../context/AppContext';
 import { GENDER_LABELS } from '../lib/constants';
+import { fileToResizedDataUrl } from '../lib/image';
 import type { Gender } from '../types';
 
 interface FormState {
@@ -63,12 +64,14 @@ export function PetProfilePage() {
     setForm((prev) => ({ ...prev, [key]: value }));
   };
 
-  const onPhotoChange = (event: ChangeEvent<HTMLInputElement>) => {
+  const onPhotoChange = async (event: ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
     if (!file) return;
-    const reader = new FileReader();
-    reader.onload = () => update('photo', String(reader.result ?? ''));
-    reader.readAsDataURL(file);
+    try {
+      update('photo', await fileToResizedDataUrl(file));
+    } catch {
+      // 图片处理失败时保持原状
+    }
   };
 
   const handleSubmit = async (event: FormEvent) => {
@@ -118,7 +121,12 @@ export function PetProfilePage() {
             </div>
             <label className="btn btn-ghost">
               上传照片
-              <input type="file" accept="image/*" style={{ display: 'none' }} onChange={onPhotoChange} />
+              <input
+                type="file"
+                accept="image/*"
+                style={{ display: 'none' }}
+                onChange={(event) => void onPhotoChange(event)}
+              />
             </label>
           </div>
 

@@ -1,8 +1,9 @@
-// 全局状态：加载宠物与记录，并向页面暴露统一的数据与操作入口。
-// 页面通过 useApp() 获取数据，所有写入操作都会在完成后刷新本地状态。
+// 全局状态：账号登录状态 + 当前用户数据。
+// 数据读写统一走 cloudRepo（Supabase），并按账号天然隔离。
 import type { ReactNode } from 'react';
 import { createContext, useCallback, useContext, useEffect, useMemo, useState } from 'react';
-import * as repo from '../lib/repository';
+import * as repo from '../lib/cloudRepo';
+import { supabase, translateAuthError } from '../lib/supabase';
 import type {
   ActivityRecord,
   BathRecord,
@@ -34,6 +35,11 @@ export interface RecordsState {
   activityRecords: ActivityRecord[];
 }
 
+export interface AppUser {
+  id: string;
+  email: string | null;
+}
+
 const EMPTY_RECORDS: RecordsState = {
   weightRecords: [],
   growthPhotos: [],
@@ -45,6 +51,8 @@ const EMPTY_RECORDS: RecordsState = {
 };
 
 interface AppContextValue {
+  user: AppUser | null;
+  authLoading: boolean;
   pets: Pet[];
   activePet: Pet | undefined;
   records: RecordsState;
@@ -61,6 +69,9 @@ interface AppContextValue {
   addBathRecord: (input: BathRecordInput) => Promise<void>;
   addActivityRecord: (input: ActivityRecordInput) => Promise<void>;
   deleteRecord: (store: string, id: string) => Promise<void>;
+  signIn: (email: string, password: string) => Promise<void>;
+  signUp: (email: string, password: string) => Promise<{ needsEmailConfirmation: boolean }>;
+  signOut: () => Promise<void>;
   resetDemo: () => Promise<void>;
 }
 
@@ -96,57 +107,70 @@ async function loadRecords(petId: string): Promise<RecordsState> {
 }
 
 export function AppProvider({ children }: { children: ReactNode }) {
+  const [user, setUser] = useState<AppUser | null>(null);
+  const [authLoading, setAuthLoading] = useState(true);
   const [pets, setPets] = useState<Pet[]>([]);
   const [activePetId, setActivePetId] = useState<string | null>(null);
   const [records, setRecords] = useState<RecordsState>(EMPTY_RECORDS);
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(false);
 
   // 重新加载宠物列表，并选中指定（或第一只）宠物。
-  const reload = useCallback(
-    async (preferredId?: string) => {
-      const all = await repo.listPets();
-      setPets(all);
-      if (all.length === 0) {
-        setActivePetId(null);
-        setRecords(EMPTY_RECORDS);
-        return;
-      }
-      const nextId = preferredId && all.some((p) => p.id === preferredId) ? preferredId : all[0].id;
-      setActivePetId(nextId);
-      setRecords(await loadRecords(nextId));
-    },
-    [],
-  );
-
-  useEffect(() => {
-    (async () => {
-      let all = await repo.listPets();
-      // 首次进入且没有任何档案时，载入一份示例数据，方便直接体验完整界面。
-      if (all.length === 0 && !localStorage.getItem('hamster-seeded')) {
-        await repo.seedDemoData();
-        localStorage.setItem('hamster-seeded', '1');
-        all = await repo.listPets();
-      }
-      setPets(all);
-      if (all.length > 0) {
-        setActivePetId(all[0].id);
-        setRecords(await loadRecords(all[0].id));
-      }
-      setLoading(false);
-    })();
+  const reload = useCallback(async (preferredId?: string) => {
+    const all = await repo.listPets();
+    setPets(all);
+    if (all.length === 0) {
+      setActivePetId(null);
+      setRecords(EMPTY_RECORDS);
+      return;
+    }
+    const nextId = preferredId && all.some((p) => p.id === preferredId) ? preferredId : all[0].id;
+    setActivePetId(nextId);
+    setRecords(await loadRecords(nextId));
   }, []);
+
+  // 监听登录状态：登录后加载云端数据，退出后清空本地状态。
+  useEffect(() => {
+    let mounted = true;
+    (async () => {
+      const { data } = await supabase.auth.getSession();
+      const sessionUser = data.session?.user ?? null;
+      if (!mounted) return;
+      setUser(sessionUser ? { id: sessionUser.id, email: sessionUser.email ?? null } : null);
+      if (sessionUser) {
+        setLoading(true);
+        await reload();
+        setLoading(false);
+      }
+      setAuthLoading(false);
+    })();
+
+    const { data: subscription } = supabase.auth.onAuthStateChange((_event, session) => {
+      const sessionUser = session?.user ?? null;
+      setUser(sessionUser ? { id: sessionUser.id, email: sessionUser.email ?? null } : null);
+      if (sessionUser) {
+        setLoading(true);
+        void reload().finally(() => setLoading(false));
+      } else {
+        setPets([]);
+        setRecords(EMPTY_RECORDS);
+        setActivePetId(null);
+      }
+    });
+
+    return () => {
+      mounted = false;
+      subscription.subscription.unsubscribe();
+    };
+  }, [reload]);
 
   const refreshRecords = useCallback(async (petId: string) => {
     setRecords(await loadRecords(petId));
   }, []);
 
-  const selectPet = useCallback(
-    async (id: string) => {
-      setActivePetId(id);
-      setRecords(await loadRecords(id));
-    },
-    [],
-  );
+  const selectPet = useCallback(async (id: string) => {
+    setActivePetId(id);
+    setRecords(await loadRecords(id));
+  }, []);
 
   const savePet = useCallback(
     async (input: PetInput) => {
@@ -229,20 +253,37 @@ export function AppProvider({ children }: { children: ReactNode }) {
     [activePetId, refreshRecords],
   );
 
+  const signIn = useCallback(async (email: string, password: string) => {
+    const { error } = await supabase.auth.signInWithPassword({ email, password });
+    if (error) throw new Error(translateAuthError(error.message));
+  }, []);
+
+  const signUp = useCallback(async (email: string, password: string) => {
+    const { data, error } = await supabase.auth.signUp({ email, password });
+    if (error) throw new Error(translateAuthError(error.message));
+    return { needsEmailConfirmation: Boolean(data.user && !data.session) };
+  }, []);
+
+  const signOut = useCallback(async () => {
+    await supabase.auth.signOut();
+    setUser(null);
+    setPets([]);
+    setRecords(EMPTY_RECORDS);
+    setActivePetId(null);
+  }, []);
+
   const resetDemo = useCallback(async () => {
-    await repo.resetAllData();
+    await repo.clearAllData();
     await repo.seedDemoData();
-    localStorage.setItem('hamster-seeded', '1');
     await reload();
   }, [reload]);
 
-  const activePet = useMemo(
-    () => pets.find((p) => p.id === activePetId),
-    [pets, activePetId],
-  );
+  const activePet = useMemo(() => pets.find((p) => p.id === activePetId), [pets, activePetId]);
 
   const value = useMemo<AppContextValue>(
     () => ({
+      user,
+      authLoading,
       pets,
       activePet,
       records,
@@ -259,9 +300,14 @@ export function AppProvider({ children }: { children: ReactNode }) {
       addBathRecord,
       addActivityRecord,
       deleteRecord,
+      signIn,
+      signUp,
+      signOut,
       resetDemo,
     }),
     [
+      user,
+      authLoading,
       pets,
       activePet,
       records,
@@ -278,6 +324,9 @@ export function AppProvider({ children }: { children: ReactNode }) {
       addBathRecord,
       addActivityRecord,
       deleteRecord,
+      signIn,
+      signUp,
+      signOut,
       resetDemo,
     ],
   );

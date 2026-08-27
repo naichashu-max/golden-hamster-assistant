@@ -1,14 +1,14 @@
-// 设置：数据备份（导出/导入）、重置示例数据、关于本地存储的说明。
+// 设置：账号信息、数据备份（导出/导入）、重置示例数据与使用说明。
 import { useRef, useState } from 'react';
 import type { ChangeEvent } from 'react';
 import { Card } from '../components/Card';
 import { useApp } from '../context/AppContext';
-import type { BackupFile } from '../lib/backup';
-import { createBackup, restoreBackup } from '../lib/backup';
+import type { BackupFile } from '../lib/cloudRepo';
+import { createBackup, restoreBackup } from '../lib/cloudRepo';
 import { todayStr } from '../lib/format';
 
 export function SettingsPage() {
-  const { pets, resetDemo, reload } = useApp();
+  const { user, pets, signOut, resetDemo, reload } = useApp();
   const fileInput = useRef<HTMLInputElement | null>(null);
   const [message, setMessage] = useState('');
 
@@ -38,7 +38,7 @@ export function SettingsPage() {
         setMessage('这不是本应用导出的备份文件。');
         return;
       }
-      if (!window.confirm('导入会覆盖当前全部数据，确定继续吗？')) return;
+      if (!window.confirm('导入会覆盖当前账号的全部数据，确定继续吗？')) return;
       await restoreBackup(parsed);
       await reload();
       setMessage('导入成功，数据已恢复。');
@@ -48,7 +48,7 @@ export function SettingsPage() {
   };
 
   const handleReset = async () => {
-    if (!window.confirm('确定清空所有数据，并重新载入示例档案吗？')) return;
+    if (!window.confirm('确定清空当前账号的全部数据，并重新载入示例档案吗？')) return;
     await resetDemo();
     setMessage('已重置为示例数据。');
   };
@@ -58,13 +58,22 @@ export function SettingsPage() {
       <header className="page-head">
         <div>
           <h1 className="page-title">设置</h1>
-          <div className="page-subtitle">备份与数据管理</div>
+          <div className="page-subtitle">账号与数据管理</div>
         </div>
       </header>
 
+      <Card title="我的账号" icon="👤">
+        <p className="muted text-sm" style={{ marginTop: 0 }}>
+          当前登录：{user?.email ?? '未知邮箱'}
+        </p>
+        <button className="btn btn-ghost" type="button" onClick={() => void signOut()}>
+          退出登录
+        </button>
+      </Card>
+
       <Card title="数据备份" icon="💾">
         <p className="muted text-sm" style={{ marginTop: 0 }}>
-          数据保存在当前设备的浏览器里，换设备或清理浏览器前，请先导出备份。
+          数据保存在你的账号云端数据库里，换设备登录同一账号即可看到；导出备份可作为额外保险。
         </p>
         <div style={{ display: 'flex', gap: 10 }}>
           <button className="btn btn-primary" type="button" onClick={() => void handleExport()}>
@@ -90,7 +99,7 @@ export function SettingsPage() {
 
       <Card title="重置" icon="🔄">
         <p className="muted text-sm" style={{ marginTop: 0 }}>
-          当前有 {pets.length} 份档案。清空后可重新载入示例数据体验。
+          当前账号有 {pets.length} 份档案。清空后可重新载入示例数据体验。
         </p>
         <button className="btn btn-danger" type="button" onClick={() => void handleReset()}>
           清空并载入示例
@@ -99,9 +108,9 @@ export function SettingsPage() {
 
       <Card title="关于" icon="ℹ️">
         <ul className="muted text-sm" style={{ margin: 0, paddingLeft: 20 }}>
-          <li>在手机浏览器菜单中选「添加到主屏幕」，可像 App 一样使用并离线打开。</li>
-          <li>不同设备之间数据相互独立，不会上传到任何服务器。</li>
-          <li>健康评分与 AI 建议仅供日常参考，不替代兽医诊断。</li>
+          <li>数据保存在你的账号云端数据库，只有你自己能看到。</li>
+          <li>在手机浏览器菜单选「添加到主屏幕」，可像 App 一样使用。</li>
+          <li>请妥善保管密码；健康评分与 AI 建议仅供日常参考，不替代兽医诊断。</li>
         </ul>
       </Card>
     </>
