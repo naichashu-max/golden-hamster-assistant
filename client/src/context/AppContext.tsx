@@ -77,6 +77,15 @@ interface AppContextValue {
 const AppContext = createContext<AppContextValue | null>(null);
 
 async function loadRecords(petId: string): Promise<RecordsState> {
+  // 单个表读取失败时降级为空列表，避免某一类记录异常拖垮整个首页。
+  const safe = async <T,>(read: () => Promise<T[]>): Promise<T[]> => {
+    try {
+      return await read();
+    } catch (error) {
+      console.warn('加载记录失败，已按空数据处理', error);
+      return [];
+    }
+  };
   const [
     weightRecords,
     growthPhotos,
@@ -86,13 +95,13 @@ async function loadRecords(petId: string): Promise<RecordsState> {
     cleaningRecords,
     activityRecords,
   ] = await Promise.all([
-    repo.listWeightRecords(petId),
-    repo.listGrowthPhotos(petId),
-    repo.listFeedingRecords(petId),
-    repo.listDrinkingRecords(petId),
-    repo.listBeddingRecords(petId),
-    repo.listCleaningRecords(petId),
-    repo.listActivityRecords(petId),
+    safe(() => repo.listWeightRecords(petId)),
+    safe(() => repo.listGrowthPhotos(petId)),
+    safe(() => repo.listFeedingRecords(petId)),
+    safe(() => repo.listDrinkingRecords(petId)),
+    safe(() => repo.listBeddingRecords(petId)),
+    safe(() => repo.listCleaningRecords(petId)),
+    safe(() => repo.listActivityRecords(petId)),
   ]);
   return {
     weightRecords,
