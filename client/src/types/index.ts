@@ -1,5 +1,5 @@
-// 领域类型定义：与 docs/database-design.md 中的字段保持一一对应。
-// 日期统一使用本地 YYYY-MM-DD，避免时区歧义；时间戳使用 ISO 字符串。
+// 领域类型定义：与 Supabase 表结构对应。
+// 日期统一使用本地 YYYY-MM-DD；时间戳使用 ISO 字符串。
 
 export type Gender = 'male' | 'female' | 'unknown';
 
@@ -11,7 +11,7 @@ export interface Pet {
   birthDate: string;
   breed: string;
   gender: Gender;
-  /** 头像照片：Base64 或云端 URL */
+  /** 头像照片：Base64 */
   photo?: string;
   personality?: string;
   createdAt: string;
@@ -41,10 +41,12 @@ export interface GrowthPhoto {
   date: string;
   photo: string;
   caption?: string;
+  /** 专属标签，如：塞满颊囊 */
+  tag?: string;
   createdAt: string;
 }
 
-export type FoodType = 'staple' | 'snack' | 'vegetable' | 'other';
+export type FoodType = 'staple' | 'snack' | 'vegetable' | 'freeze_dried' | 'other';
 
 /** 喂食记录 */
 export interface FeedingRecord {
@@ -69,24 +71,26 @@ export interface DrinkingRecord {
   createdAt: string;
 }
 
-/** 换垫料记录 */
+/** 清洁任务类型：局部清理 / 整笼大扫除。金丝熊严禁水洗，无“洗澡”任务。 */
+export type CleaningTask = 'spot' | 'deep';
+
+export interface CleaningRecord {
+  id: string;
+  petId: string;
+  date: string;
+  taskType: CleaningTask;
+  /** 整笼大扫除时的垫料类型 */
+  beddingType?: string;
+  note?: string;
+  createdAt: string;
+}
+
+/** 换垫料记录（旧版表结构，保留兼容） */
 export interface BeddingRecord {
   id: string;
   petId: string;
   date: string;
   beddingType: string;
-  note?: string;
-  createdAt: string;
-}
-
-export type BathType = 'sand' | 'dry' | 'other';
-
-/** 洗澡记录（金丝熊通常为沙浴） */
-export interface BathRecord {
-  id: string;
-  petId: string;
-  date: string;
-  bathType: BathType;
   note?: string;
   createdAt: string;
 }
@@ -106,7 +110,7 @@ export interface ActivityRecord {
   createdAt: string;
 }
 
-/** 每日报告（可由活动/健康模块生成） */
+/** 每日报告（预留） */
 export interface DailyReport {
   id: string;
   petId: string;
@@ -118,8 +122,8 @@ export interface DailyReport {
   generatedAt: string;
 }
 
-/** 护理项目状态：自动计算距离下次护理时间 */
-export type CareKey = 'feeding' | 'drinking' | 'bedding' | 'bath';
+/** 护理项目：喂食、饮水、局部清洁、整笼清洁 */
+export type CareKey = 'feeding' | 'drinking' | 'spotClean' | 'deepClean';
 
 export interface CareStatus {
   key: CareKey;
@@ -134,11 +138,17 @@ export interface CareStatus {
   status: 'ok' | 'soon' | 'overdue';
 }
 
-/** 健康评分结果：只给饲养提醒，不做诊断 */
+/** 健康分析：只给饲养提醒，不做诊断 */
 export interface HealthBreakdownItem {
   label: string;
   score: number;
   message: string;
+}
+
+/** 黄色警报：体重连续环比下降超过阈值时触发 */
+export interface HealthAlert {
+  title: string;
+  checklist: string[];
 }
 
 export interface HealthResult {
@@ -146,6 +156,7 @@ export interface HealthResult {
   summary: string;
   reminders: string[];
   breakdown: HealthBreakdownItem[];
+  alert: HealthAlert | null;
 }
 
 /** AI 陪伴所需的上下文快照 */
@@ -161,9 +172,10 @@ export interface AiReply {
   source: 'rule-based' | 'cloud';
 }
 
+// ---------- 以下为早期本地存储版本的遗留类型，保留以避免旧模块编译报错 ----------
+
 export type SyncOperation = 'upsert' | 'delete';
 
-/** 同步队列条目：本地变更等待推送云端 */
 export interface SyncItem {
   id: string;
   entity: string;

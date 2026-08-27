@@ -1,20 +1,13 @@
 // 日常护理：根据最近一次护理日期，自动计算距离下次护理的时间。
+// 清洁任务分两级：局部铲屎/清尿沙（约 2~3 天）、整笼大扫除换垫料（约 30~45 天）。
 import { CARE_INTERVALS } from './constants';
-import type {
-  BathRecord,
-  BeddingRecord,
-  CareKey,
-  CareStatus,
-  DrinkingRecord,
-  FeedingRecord,
-} from '../types';
+import type { CareKey, CareStatus, CleaningRecord, DrinkingRecord, FeedingRecord } from '../types';
 import { addDays, daysBetween, todayStr } from './format';
 
 interface CareInput {
   feeding: FeedingRecord[];
   drinking: DrinkingRecord[];
-  bedding: BeddingRecord[];
-  bath: BathRecord[];
+  cleaning: CleaningRecord[];
   today?: string;
 }
 
@@ -47,10 +40,13 @@ export function computeCareStatus(input: CareInput): CareStatus[] {
     };
   };
 
+  const spotDates = input.cleaning.filter((r) => r.taskType === 'spot').map((r) => r.date);
+  const deepDates = input.cleaning.filter((r) => r.taskType === 'deep').map((r) => r.date);
+
   return [
     build('feeding', input.feeding.map((r) => r.date)),
     build('drinking', input.drinking.map((r) => r.date)),
-    build('bedding', input.bedding.map((r) => r.date)),
-    build('bath', input.bath.map((r) => r.date)),
+    build('spotClean', spotDates),
+    build('deepClean', deepDates),
   ];
 }

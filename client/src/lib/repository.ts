@@ -5,7 +5,6 @@ import { newId, nowIso } from './id';
 import { enqueue } from './sync';
 import type {
   ActivityRecord,
-  BathRecord,
   BeddingRecord,
   DrinkingRecord,
   FeedingRecord,
@@ -20,7 +19,6 @@ export type GrowthPhotoInput = Omit<GrowthPhoto, 'id' | 'createdAt'>;
 export type FeedingRecordInput = Omit<FeedingRecord, 'id' | 'createdAt'>;
 export type DrinkingRecordInput = Omit<DrinkingRecord, 'id' | 'createdAt'>;
 export type BeddingRecordInput = Omit<BeddingRecord, 'id' | 'createdAt'>;
-export type BathRecordInput = Omit<BathRecord, 'id' | 'createdAt'>;
 export type ActivityRecordInput = Omit<ActivityRecord, 'id' | 'createdAt'>;
 
 /** 给新记录补齐 id 与创建时间 */
@@ -69,7 +67,6 @@ export async function deletePet(id: string): Promise<void> {
     STORES.feedingRecords,
     STORES.drinkingRecords,
     STORES.beddingRecords,
-    STORES.bathRecords,
     STORES.activityRecords,
     STORES.dailyReports,
   ];
@@ -132,9 +129,6 @@ export const listDrinkingRecords = (petId: string) =>
 export const listBeddingRecords = (petId: string) =>
   listRecords<BeddingRecord>(STORES.beddingRecords, petId);
 
-export const listBathRecords = (petId: string) =>
-  listRecords<BathRecord>(STORES.bathRecords, petId);
-
 export async function addFeedingRecord(input: FeedingRecordInput): Promise<FeedingRecord> {
   const record = withMeta(input);
   await dbPut(STORES.feedingRecords, record);
@@ -153,13 +147,6 @@ export async function addBeddingRecord(input: BeddingRecordInput): Promise<Beddi
   const record = withMeta(input);
   await dbPut(STORES.beddingRecords, record);
   await enqueue(STORES.beddingRecords, record.id, 'upsert', record);
-  return record;
-}
-
-export async function addBathRecord(input: BathRecordInput): Promise<BathRecord> {
-  const record = withMeta(input);
-  await dbPut(STORES.bathRecords, record);
-  await enqueue(STORES.bathRecords, record.id, 'upsert', record);
   return record;
 }
 
@@ -251,5 +238,4 @@ async function runSeed(): Promise<void> {
   }
 
   await addBeddingRecord({ petId: pet.id, date: dateOffset(-5), beddingType: '纸棉' });
-  await addBathRecord({ petId: pet.id, date: dateOffset(-2), bathType: 'sand' });
 }

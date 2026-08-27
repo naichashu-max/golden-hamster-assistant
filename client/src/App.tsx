@@ -7,6 +7,7 @@ import { ActivityPage } from './pages/ActivityPage';
 import { AiCompanionPage } from './pages/AiCompanionPage';
 import { AuthPage } from './pages/AuthPage';
 import { DailyCarePage } from './pages/DailyCarePage';
+import { EncyclopediaPage } from './pages/EncyclopediaPage';
 import { GrowthPage } from './pages/GrowthPage';
 import { HealthPage } from './pages/HealthPage';
 import { HomePage } from './pages/HomePage';
@@ -57,6 +58,7 @@ export default function App() {
           <Route path="/activity" element={<ActivityPage />} />
           <Route path="/health" element={<HealthPage />} />
           <Route path="/ai" element={<AiCompanionPage />} />
+          <Route path="/wiki" element={<EncyclopediaPage />} />
           <Route path="/pet/new" element={<PetProfilePage />} />
           <Route path="/pet/:id" element={<PetProfilePage />} />
           <Route path="/settings" element={<SettingsPage />} />

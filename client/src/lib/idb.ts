@@ -12,7 +12,6 @@ export const STORES = {
   feedingRecords: 'feeding_records',
   drinkingRecords: 'drinking_records',
   beddingRecords: 'bedding_records',
-  bathRecords: 'bath_records',
   activityRecords: 'activity_records',
   dailyReports: 'daily_reports',
   syncQueue: 'sync_queue',

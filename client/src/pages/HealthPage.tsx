@@ -1,9 +1,8 @@
-// 健康分析：展示健康评分、三个维度趋势与温和饲养提醒。
-// 强调：只做饲养提醒，不做疾病诊断。
+// 健康分析：温馨状态卡 + 趋势 + 饲养提醒；不做疾病诊断。
 import { Card } from '../components/Card';
-import { ProgressRing } from '../components/ProgressRing';
 import { useApp } from '../context/AppContext';
-import { computeHealth } from '../lib/health';
+import { daysBetween, todayStr } from '../lib/format';
+import { computeHealth, getPetStatus } from '../lib/health';
 
 export function HealthPage() {
   const { activePet, records } = useApp();
@@ -22,6 +21,9 @@ export function HealthPage() {
     feeding: records.feedingRecords,
     activity: records.activityRecords,
   });
+  const latestActivity = records.activityRecords[records.activityRecords.length - 1];
+  const status = getPetStatus(health, latestActivity);
+  const daysAtHome = Math.max(1, daysBetween(activePet.createdAt.slice(0, 10), todayStr()) + 1);
 
   return (
     <>
@@ -33,21 +35,27 @@ export function HealthPage() {
       </header>
 
       <Card>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 20 }}>
-          <ProgressRing value={health.score} size={116} stroke={10}>
-            <div style={{ fontSize: 30, fontWeight: 800 }}>{health.score}</div>
-            <div className="muted" style={{ fontSize: 12 }}>
-              健康评分
-            </div>
-          </ProgressRing>
-          <div style={{ flex: 1 }}>
-            <div style={{ fontWeight: 800, marginBottom: 6 }}>给 {activePet.name} 的小结</div>
-            <p className="muted" style={{ margin: 0 }}>
-              {health.summary}
-            </p>
+        <div className="greeting">
+          <div className="avatar">
+            {activePet.photo ? <img src={activePet.photo} alt={activePet.name} /> : '🐹'}
+          </div>
+          <div className="greeting-main">
+            <div className="greeting-title">已来到新家第 {daysAtHome} 天</div>
+            <div className="greeting-status">状态：{status} 🐹</div>
+            <div className="greeting-meta">{health.summary}</div>
           </div>
         </div>
       </Card>
+
+      {health.alert && (
+        <Card title={health.alert.title} icon="🟡">
+          <ul className="checklist">
+            {health.alert.checklist.map((item) => (
+              <li key={item}>{item}</li>
+            ))}
+          </ul>
+        </Card>
+      )}
 
       <Card title="趋势分析" icon="📊">
         {health.breakdown.map((item) => (
@@ -67,11 +75,9 @@ export function HealthPage() {
       </Card>
 
       <Card title="饲养提醒" icon="💡">
-        <ul style={{ margin: 0, paddingLeft: 20 }}>
+        <ul className="checklist">
           {health.reminders.map((reminder) => (
-            <li key={reminder} style={{ marginBottom: 8 }}>
-              {reminder}
-            </li>
+            <li key={reminder}>{reminder}</li>
           ))}
         </ul>
       </Card>

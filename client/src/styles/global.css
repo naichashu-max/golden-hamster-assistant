@@ -1,21 +1,21 @@
 :root {
-  --bg: #fbf6ef;
+  --bg: #fdfbf7;
   --surface: #ffffff;
-  --surface-soft: #fff9f1;
-  --text: #4a3728;
-  --text-muted: #9a8b7c;
-  --primary: #d98e5f;
-  --primary-deep: #c67a4c;
-  --primary-soft: #f7e5d6;
-  --accent: #e9b45c;
-  --ok: #7fb77e;
-  --warn: #e7a24b;
-  --danger: #d9766a;
-  --line: #f0e7dc;
-  --radius: 20px;
-  --radius-sm: 14px;
-  --shadow: 0 8px 24px rgba(180, 140, 100, 0.12);
-  --shadow-soft: 0 4px 14px rgba(180, 140, 100, 0.08);
+  --surface-soft: #fbf2e4;
+  --text: #4f3e31;
+  --text-muted: #9b8b79;
+  --primary: #eaa44a;
+  --primary-deep: #8c6d53;
+  --primary-soft: #f7ead3;
+  --accent: #e8c98b;
+  --ok: #85b79d;
+  --warn: #e8b24a;
+  --danger: #e88a8a;
+  --line: #f3ebdf;
+  --radius: 24px;
+  --radius-sm: 16px;
+  --shadow: 0 10px 30px rgba(140, 109, 83, 0.08);
+  --shadow-soft: 0 2px 8px rgba(140, 109, 83, 0.06);
   --nav-height: 68px;
 }
 
@@ -270,13 +270,13 @@ button {
 }
 
 .btn:active {
-  transform: scale(0.98);
+  transform: scale(0.95);
 }
 
 .btn-primary {
   background: linear-gradient(135deg, var(--primary), var(--primary-deep));
   color: #fff;
-  box-shadow: 0 6px 16px rgba(217, 142, 95, 0.28);
+  box-shadow: 0 6px 16px rgba(234, 164, 74, 0.28);
 }
 
 .btn-ghost {
@@ -670,4 +670,275 @@ button {
     transform: scale(1);
     opacity: 1;
   }
+}
+
+/* ---------- 温馨问候卡 ---------- */
+.greeting {
+  display: flex;
+  gap: 14px;
+  align-items: center;
+}
+
+.greeting .avatar {
+  width: 64px;
+  height: 64px;
+  font-size: 32px;
+}
+
+.greeting-main {
+  flex: 1;
+  min-width: 0;
+}
+
+.greeting-title {
+  font-size: 17px;
+  font-weight: 800;
+}
+
+.greeting-status {
+  color: var(--primary-deep);
+  font-weight: 700;
+  margin-top: 2px;
+}
+
+.greeting-meta {
+  color: var(--text-muted);
+  font-size: 12px;
+  margin-top: 2px;
+}
+
+/* ---------- 今日打卡胶囊 ---------- */
+.check-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.check-capsule {
+  border: 0;
+  border-radius: var(--radius-sm);
+  background: var(--surface-soft);
+  padding: 14px 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  align-items: flex-start;
+  text-align: left;
+  transition: transform 0.12s ease;
+}
+
+.check-capsule:active {
+  transform: scale(0.95);
+}
+
+.check-capsule.done {
+  background: rgba(133, 183, 157, 0.16);
+  box-shadow: inset 0 0 0 1.5px var(--ok);
+}
+
+.check-icon {
+  font-size: 24px;
+}
+
+.check-label {
+  font-weight: 700;
+  font-size: 14px;
+}
+
+.check-state {
+  font-size: 12px;
+  color: var(--danger);
+}
+
+.check-capsule.done .check-state {
+  color: var(--ok);
+}
+
+/* ---------- 排查清单 ---------- */
+.checklist {
+  margin: 0;
+  padding-left: 18px;
+}
+
+.checklist li {
+  margin-bottom: 8px;
+}
+
+/* ---------- 分段切换（百科） ---------- */
+.seg-tabs {
+  display: flex;
+  background: var(--surface-soft);
+  border-radius: 999px;
+  padding: 4px;
+  margin-bottom: 14px;
+}
+
+.seg-tab {
+  flex: 1;
+  border: 0;
+  border-radius: 999px;
+  background: transparent;
+  padding: 9px;
+  font-weight: 700;
+  color: var(--text-muted);
+}
+
+.seg-tab.active {
+  background: #fff;
+  color: var(--primary-deep);
+  box-shadow: var(--shadow-soft);
+}
+
+/* ---------- 食物速查 ---------- */
+.food-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.food-item {
+  display: flex;
+  gap: 10px;
+  align-items: flex-start;
+  justify-content: space-between;
+  padding: 10px 0;
+  border-bottom: 1px solid var(--line);
+}
+
+.food-item:last-child {
+  border-bottom: 0;
+}
+
+.food-main {
+  min-width: 0;
+}
+
+.food-name {
+  font-weight: 700;
+}
+
+.food-note {
+  color: var(--text-muted);
+  font-size: 12px;
+  margin-top: 2px;
+}
+
+.level-badge {
+  flex: none;
+  border-radius: 999px;
+  padding: 4px 10px;
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.level-badge.safe {
+  background: rgba(133, 183, 157, 0.16);
+  color: #4f8a6b;
+}
+
+.level-badge.caution {
+  background: rgba(232, 178, 74, 0.16);
+  color: #a8771e;
+}
+
+.level-badge.forbidden {
+  background: rgba(232, 138, 138, 0.16);
+  color: #c25b5b;
+}
+
+/* ---------- 垫料计算器 ---------- */
+.calc-result {
+  border-radius: var(--radius-sm);
+  padding: 14px;
+  margin-top: 4px;
+}
+
+.calc-result.warn {
+  background: rgba(232, 138, 138, 0.12);
+}
+
+.calc-result.mid {
+  background: rgba(232, 178, 74, 0.12);
+}
+
+.calc-result.good {
+  background: rgba(133, 183, 157, 0.14);
+}
+
+.calc-big {
+  font-size: 16px;
+  font-weight: 700;
+}
+
+.calc-big strong {
+  color: var(--primary-deep);
+  font-size: 22px;
+}
+
+.calc-sub {
+  color: var(--text-muted);
+  font-size: 12px;
+  margin-top: 2px;
+}
+
+.calc-advice {
+  margin: 8px 0 0;
+  font-size: 13px;
+}
+
+/* ---------- 拍立得相册 ---------- */
+.polaroid-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 14px 12px;
+}
+
+.polaroid {
+  margin: 0;
+  position: relative;
+  background: #fff;
+  border-radius: 10px;
+  box-shadow: 0 6px 18px rgba(140, 109, 83, 0.14);
+  padding: 8px 8px 10px;
+  transition: transform 0.15s ease;
+}
+
+.polaroid img {
+  width: 100%;
+  aspect-ratio: 1 / 1;
+  object-fit: cover;
+  border-radius: 6px;
+  display: block;
+}
+
+.polaroid figcaption {
+  padding: 8px 4px 0;
+  text-align: center;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.polaroid-tag {
+  color: var(--primary-deep);
+  font-weight: 700;
+  font-size: 12px;
+}
+
+.polaroid-caption {
+  color: var(--text-muted);
+  font-size: 11px;
+}
+
+.polaroid-delete {
+  position: absolute;
+  top: 4px;
+  right: 4px;
+  width: 24px;
+  height: 24px;
+  border: 0;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.9);
+  color: var(--danger);
+  font-size: 12px;
 }

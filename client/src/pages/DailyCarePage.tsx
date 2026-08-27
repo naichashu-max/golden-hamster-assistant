@@ -1,13 +1,13 @@
-// 日常管理：喂食、饮水、换垫料、洗澡，并自动计算距离下次护理时间。
+// 日常管理：清洁任务（局部铲屎 / 整笼大扫除）+ 护理倒计时 + 吃喝记录。
+// 注意：金丝熊严禁水洗、不使用浴沙，因此没有“洗澡”功能。
 import { useState } from 'react';
 import type { FormEvent, ReactNode } from 'react';
 import { Card } from '../components/Card';
 import { useApp } from '../context/AppContext';
-import { BATH_TYPE_LABELS, FOOD_TYPE_LABELS } from '../lib/constants';
+import { CLEANING_LABELS, FOOD_TYPE_LABELS } from '../lib/constants';
 import { careDueText, formatDate, todayStr } from '../lib/format';
 import { computeCareStatus } from '../lib/care';
-import { STORES } from '../lib/idb';
-import type { BathType, FoodType } from '../types';
+import { CLOUD_TABLE } from '../lib/cloudRepo';
 
 interface RowItem {
   id: string;
@@ -26,7 +26,7 @@ function RecordRows<T extends RowItem>({
   if (items.length === 0) return <div className="muted text-sm">还没有记录</div>;
   return (
     <div className="record-list">
-      {items.slice(0, 3).map((item) => (
+      {items.slice(0, 4).map((item) => (
         <div className="record-item" key={item.id}>
           <div className="record-main">
             {render(item)}
@@ -42,25 +42,9 @@ function RecordRows<T extends RowItem>({
 }
 
 export function DailyCarePage() {
-  const {
-    activePet,
-    records,
-    addFeedingRecord,
-    addDrinkingRecord,
-    addBeddingRecord,
-    addBathRecord,
-    deleteRecord,
-  } = useApp();
-
-  const [feeding, setFeeding] = useState({
-    date: todayStr(),
-    foodType: 'staple' as FoodType,
-    amount: '',
-    note: '',
-  });
-  const [drinking, setDrinking] = useState({ date: todayStr(), amount: '', note: '' });
-  const [bedding, setBedding] = useState({ date: todayStr(), beddingType: '纸棉', note: '' });
-  const [bath, setBath] = useState({ date: todayStr(), bathType: 'sand' as BathType, note: '' });
+  const { activePet, records, addCleaningRecord, deleteRecord } = useApp();
+  const [spot, setSpot] = useState({ date: todayStr(), note: '' });
+  const [deep, setDeep] = useState({ date: todayStr(), beddingType: '纸棉', note: '' });
 
   if (!activePet) {
     return (
@@ -74,57 +58,32 @@ export function DailyCarePage() {
   const care = computeCareStatus({
     feeding: records.feedingRecords,
     drinking: records.drinkingRecords,
-    bedding: records.beddingRecords,
-    bath: records.bathRecords,
+    cleaning: records.cleaningRecords,
   });
 
-  const submitFeeding = async (event: FormEvent) => {
+  const submitSpot = async (event: FormEvent) => {
     event.preventDefault();
-    if (!feeding.date) return;
-    await addFeedingRecord({
+    if (!spot.date) return;
+    await addCleaningRecord({
       petId: activePet.id,
-      date: feeding.date,
-      foodType: feeding.foodType,
-      amount: feeding.amount ? Number(feeding.amount) : undefined,
-      note: feeding.note.trim() || undefined,
+      date: spot.date,
+      taskType: 'spot',
+      note: spot.note.trim() || undefined,
     });
-    setFeeding((p) => ({ ...p, amount: '', note: '' }));
+    setSpot((p) => ({ ...p, note: '' }));
   };
 
-  const submitDrinking = async (event: FormEvent) => {
+  const submitDeep = async (event: FormEvent) => {
     event.preventDefault();
-    if (!drinking.date) return;
-    await addDrinkingRecord({
+    if (!deep.date || !deep.beddingType.trim()) return;
+    await addCleaningRecord({
       petId: activePet.id,
-      date: drinking.date,
-      amount: drinking.amount ? Number(drinking.amount) : undefined,
-      note: drinking.note.trim() || undefined,
+      date: deep.date,
+      taskType: 'deep',
+      beddingType: deep.beddingType.trim(),
+      note: deep.note.trim() || undefined,
     });
-    setDrinking((p) => ({ ...p, amount: '', note: '' }));
-  };
-
-  const submitBedding = async (event: FormEvent) => {
-    event.preventDefault();
-    if (!bedding.date || !bedding.beddingType.trim()) return;
-    await addBeddingRecord({
-      petId: activePet.id,
-      date: bedding.date,
-      beddingType: bedding.beddingType.trim(),
-      note: bedding.note.trim() || undefined,
-    });
-    setBedding((p) => ({ ...p, note: '' }));
-  };
-
-  const submitBath = async (event: FormEvent) => {
-    event.preventDefault();
-    if (!bath.date) return;
-    await addBathRecord({
-      petId: activePet.id,
-      date: bath.date,
-      bathType: bath.bathType,
-      note: bath.note.trim() || undefined,
-    });
-    setBath((p) => ({ ...p, note: '' }));
+    setDeep((p) => ({ ...p, note: '' }));
   };
 
   return (
@@ -132,7 +91,7 @@ export function DailyCarePage() {
       <header className="page-head">
         <div>
           <h1 className="page-title">日常管理</h1>
-          <div className="page-subtitle">{activePet.name}的吃喝与清洁</div>
+          <div className="page-subtitle">清洁与护理</div>
         </div>
       </header>
 
@@ -153,153 +112,101 @@ export function DailyCarePage() {
         ))}
       </Card>
 
-      <Card title="喂食" icon="🌾">
-        <form onSubmit={submitFeeding}>
-          <div className="grid-2">
-            <div className="field">
-              <label>日期</label>
-              <input
-                type="date"
-                value={feeding.date}
-                onChange={(e) => setFeeding((p) => ({ ...p, date: e.target.value }))}
-              />
-            </div>
-            <div className="field">
-              <label>食物类型</label>
-              <select
-                value={feeding.foodType}
-                onChange={(e) => setFeeding((p) => ({ ...p, foodType: e.target.value as FoodType }))}
-              >
-                {(Object.keys(FOOD_TYPE_LABELS) as FoodType[]).map((key) => (
-                  <option key={key} value={key}>
-                    {FOOD_TYPE_LABELS[key]}
-                  </option>
-                ))}
-              </select>
-            </div>
+      <Card title={CLEANING_LABELS.spot} icon="🧹">
+        <p className="muted text-sm" style={{ marginTop: 0 }}>
+          建议 2~3 天清理一次尿沙和粪便，保持干燥卫生。
+        </p>
+        <form onSubmit={submitSpot}>
+          <div className="field">
+            <label>日期</label>
+            <input
+              type="date"
+              value={spot.date}
+              onChange={(e) => setSpot((p) => ({ ...p, date: e.target.value }))}
+            />
           </div>
           <div className="field">
-            <label>食量 (g，可选)</label>
+            <label>备注（可选）</label>
             <input
-              type="number"
-              inputMode="decimal"
-              value={feeding.amount}
-              placeholder="8"
-              onChange={(e) => setFeeding((p) => ({ ...p, amount: e.target.value }))}
+              value={spot.note}
+              placeholder="比如：换了尿沙"
+              onChange={(e) => setSpot((p) => ({ ...p, note: e.target.value }))}
             />
           </div>
           <button className="btn btn-primary btn-block" type="submit">
-            记录喂食
+            记一次局部清理
           </button>
         </form>
-        <div className="divider" />
-        <RecordRows
-          items={records.feedingRecords.slice().reverse()}
-          onDelete={(id) => deleteRecord(STORES.feedingRecords, id)}
-          render={(item) => `${FOOD_TYPE_LABELS[item.foodType]}${item.amount ? ` · ${item.amount}g` : ''}`}
-        />
       </Card>
 
-      <Card title="饮水" icon="💧">
-        <form onSubmit={submitDrinking}>
+      <Card title={CLEANING_LABELS.deep} icon="🏠">
+        <p className="muted text-sm" style={{ marginTop: 0 }}>
+          建议 30~45 天整笼大扫除一次：清洗笼具、全部更换垫料。
+        </p>
+        <form onSubmit={submitDeep}>
           <div className="grid-2">
             <div className="field">
               <label>日期</label>
               <input
                 type="date"
-                value={drinking.date}
-                onChange={(e) => setDrinking((p) => ({ ...p, date: e.target.value }))}
+                value={deep.date}
+                onChange={(e) => setDeep((p) => ({ ...p, date: e.target.value }))}
               />
             </div>
             <div className="field">
-              <label>饮水量 (ml，可选)</label>
+              <label>新垫料类型</label>
               <input
-                type="number"
-                inputMode="decimal"
-                value={drinking.amount}
-                placeholder="20"
-                onChange={(e) => setDrinking((p) => ({ ...p, amount: e.target.value }))}
+                value={deep.beddingType}
+                placeholder="纸棉 / 软木屑"
+                onChange={(e) => setDeep((p) => ({ ...p, beddingType: e.target.value }))}
               />
             </div>
           </div>
+          <div className="field">
+            <label>备注（可选）</label>
+            <input
+              value={deep.note}
+              placeholder="可选"
+              onChange={(e) => setDeep((p) => ({ ...p, note: e.target.value }))}
+            />
+          </div>
           <button className="btn btn-primary btn-block" type="submit">
-            记录饮水
+            记一次整笼大扫除
           </button>
         </form>
-        <div className="divider" />
+      </Card>
+
+      <Card title="清洁记录" icon="🗂️">
         <RecordRows
-          items={records.drinkingRecords.slice().reverse()}
-          onDelete={(id) => deleteRecord(STORES.drinkingRecords, id)}
-          render={(item) => (item.amount ? `${item.amount}ml` : '已换新水')}
+          items={[...records.cleaningRecords].reverse()}
+          onDelete={(id) => void deleteRecord(CLOUD_TABLE.cleaningRecords, id)}
+          render={(item) =>
+            item.taskType === 'deep'
+              ? `${CLEANING_LABELS.deep} · ${item.beddingType ?? ''}`
+              : CLEANING_LABELS.spot
+          }
         />
       </Card>
 
-      <Card title="换垫料" icon="🛏️">
-        <form onSubmit={submitBedding}>
-          <div className="grid-2">
-            <div className="field">
-              <label>日期</label>
-              <input
-                type="date"
-                value={bedding.date}
-                onChange={(e) => setBedding((p) => ({ ...p, date: e.target.value }))}
-              />
-            </div>
-            <div className="field">
-              <label>垫料类型</label>
-              <input
-                value={bedding.beddingType}
-                placeholder="纸棉 / 木屑 / 混合"
-                onChange={(e) => setBedding((p) => ({ ...p, beddingType: e.target.value }))}
-              />
-            </div>
-          </div>
-          <button className="btn btn-primary btn-block" type="submit">
-            记录换垫料
-          </button>
-        </form>
-        <div className="divider" />
+      <Card title="最近吃喝" icon="🍽️">
+        <div className="section-title" style={{ fontSize: 13 }}>
+          喂食
+        </div>
         <RecordRows
-          items={records.beddingRecords.slice().reverse()}
-          onDelete={(id) => deleteRecord(STORES.beddingRecords, id)}
-          render={(item) => item.beddingType}
+          items={[...records.feedingRecords].reverse()}
+          onDelete={(id) => void deleteRecord(CLOUD_TABLE.feedingRecords, id)}
+          render={(item) =>
+            `${FOOD_TYPE_LABELS[item.foodType]}${item.amount ? ` · ${item.amount}g` : ''}`
+          }
         />
-      </Card>
-
-      <Card title="洗澡" icon="🛁">
-        <form onSubmit={submitBath}>
-          <div className="grid-2">
-            <div className="field">
-              <label>日期</label>
-              <input
-                type="date"
-                value={bath.date}
-                onChange={(e) => setBath((p) => ({ ...p, date: e.target.value }))}
-              />
-            </div>
-            <div className="field">
-              <label>方式</label>
-              <select
-                value={bath.bathType}
-                onChange={(e) => setBath((p) => ({ ...p, bathType: e.target.value as BathType }))}
-              >
-                {(Object.keys(BATH_TYPE_LABELS) as BathType[]).map((key) => (
-                  <option key={key} value={key}>
-                    {BATH_TYPE_LABELS[key]}
-                  </option>
-                ))}
-              </select>
-            </div>
-          </div>
-          <button className="btn btn-primary btn-block" type="submit">
-            记录洗澡
-          </button>
-        </form>
         <div className="divider" />
+        <div className="section-title" style={{ fontSize: 13 }}>
+          饮水
+        </div>
         <RecordRows
-          items={records.bathRecords.slice().reverse()}
-          onDelete={(id) => deleteRecord(STORES.bathRecords, id)}
-          render={(item) => BATH_TYPE_LABELS[item.bathType]}
+          items={[...records.drinkingRecords].reverse()}
+          onDelete={(id) => void deleteRecord(CLOUD_TABLE.drinkingRecords, id)}
+          render={(item) => (item.amount ? `${item.amount}ml` : '已换凉开水')}
         />
       </Card>
     </>

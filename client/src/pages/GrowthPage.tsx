@@ -1,13 +1,12 @@
-// 成长记录：每日体重/身长记录、体重曲线、成长相册。
+// 成长记录：体重/身长记录、体重曲线、拍立得时光相册。
 import { useState } from 'react';
 import type { ChangeEvent, FormEvent } from 'react';
 import { Card } from '../components/Card';
-import { PhotoStrip } from '../components/PhotoStrip';
 import { WeightChart } from '../components/WeightChart';
 import { useApp } from '../context/AppContext';
-import { WEIGHT_STATUS_LABELS } from '../lib/constants';
+import { PHOTO_TAGS, WEIGHT_STATUS_LABELS } from '../lib/constants';
 import { formatDate, formatNumber, todayStr } from '../lib/format';
-import { STORES } from '../lib/idb';
+import { CLOUD_TABLE } from '../lib/cloudRepo';
 import { fileToResizedDataUrl } from '../lib/image';
 import type { WeightStatus } from '../types';
 
@@ -20,7 +19,7 @@ export function GrowthPage() {
     status: 'normal' as WeightStatus,
     note: '',
   });
-  const [photoForm, setPhotoForm] = useState({ date: todayStr(), caption: '' });
+  const [photoForm, setPhotoForm] = useState({ date: todayStr(), caption: '', tag: '' });
   const [photoData, setPhotoData] = useState('');
 
   if (!activePet) {
@@ -65,9 +64,10 @@ export function GrowthPage() {
       date: photoForm.date,
       photo: photoData,
       caption: photoForm.caption.trim() || undefined,
+      tag: photoForm.tag || undefined,
     });
     setPhotoData('');
-    setPhotoForm((prev) => ({ ...prev, caption: '' }));
+    setPhotoForm((prev) => ({ ...prev, caption: '', tag: '' }));
   };
 
   return (
@@ -75,7 +75,7 @@ export function GrowthPage() {
       <header className="page-head">
         <div>
           <h1 className="page-title">成长记录</h1>
-          <div className="page-subtitle">{activePet.name}的体重与照片</div>
+          <div className="page-subtitle">{activePet.name}的体重与时光</div>
         </div>
       </header>
 
@@ -101,7 +101,7 @@ export function GrowthPage() {
                 id="weight-value"
                 type="number"
                 inputMode="decimal"
-                placeholder="45.0"
+                placeholder="150"
                 value={weightForm.weight}
                 onChange={(e) => setWeightForm((p) => ({ ...p, weight: e.target.value }))}
               />
@@ -152,6 +152,90 @@ export function GrowthPage() {
         </form>
       </Card>
 
+      <Card title="拍立得时光" icon="📸">
+        {records.growthPhotos.length === 0 ? (
+          <div className="empty-state">
+            <span className="empty-icon">📷</span>
+            还没有照片，记录下第一张吧
+          </div>
+        ) : (
+          <div className="polaroid-grid">
+            {[...records.growthPhotos].reverse().map((photo, index) => (
+              <figure
+                key={photo.id}
+                className="polaroid"
+                style={{ transform: `rotate(${((index % 3) - 1) * 1.4}deg)` }}
+              >
+                <img src={photo.photo} alt={photo.caption ?? '成长照片'} />
+                <figcaption>
+                  {photo.tag && <span className="polaroid-tag">#{photo.tag}</span>}
+                  {photo.caption && <span className="polaroid-caption">{photo.caption}</span>}
+                </figcaption>
+                <button
+                  className="polaroid-delete"
+                  type="button"
+                  aria-label="删除照片"
+                  onClick={() => void deleteRecord(CLOUD_TABLE.growthPhotos, photo.id)}
+                >
+                  ✕
+                </button>
+              </figure>
+            ))}
+          </div>
+        )}
+
+        <div className="divider" />
+        <form onSubmit={handleAddPhoto}>
+          <div className="field">
+            <label htmlFor="photo-date">日期</label>
+            <input
+              id="photo-date"
+              type="date"
+              value={photoForm.date}
+              onChange={(e) => setPhotoForm((p) => ({ ...p, date: e.target.value }))}
+            />
+          </div>
+          <div className="field">
+            <label>选个标签</label>
+            <div className="chip-row">
+              {PHOTO_TAGS.map((tag) => (
+                <button
+                  type="button"
+                  key={tag}
+                  className={`chip${photoForm.tag === tag ? ' active' : ''}`}
+                  onClick={() =>
+                    setPhotoForm((p) => ({ ...p, tag: p.tag === tag ? '' : tag }))
+                  }
+                >
+                  #{tag}
+                </button>
+              ))}
+            </div>
+          </div>
+          <div className="field">
+            <label htmlFor="photo-caption">一句话说明</label>
+            <input
+              id="photo-caption"
+              value={photoForm.caption}
+              placeholder="可选"
+              onChange={(e) => setPhotoForm((p) => ({ ...p, caption: e.target.value }))}
+            />
+          </div>
+          <label className="btn btn-ghost btn-block" style={{ marginBottom: 10 }}>
+            {photoData ? '已选择照片，点击重新选择' : '选择照片'}
+            <input
+              type="file"
+              accept="image/*"
+              style={{ display: 'none' }}
+              onChange={(event) => void onPhotoChange(event)}
+            />
+          </label>
+          <button className="btn btn-primary btn-block" type="submit" disabled={!photoData}>
+            冲印这张拍立得
+          </button>
+        </form>
+      </Card>
+
       <Card title="体重历史" icon="🗂️">
         {records.weightRecords.length === 0 ? (
           <div className="muted text-sm">还没有记录</div>
@@ -168,7 +252,7 @@ export function GrowthPage() {
                 <button
                   className="delete-btn"
                   type="button"
-                  onClick={() => deleteRecord(STORES.weightRecords, record.id)}
+                  onClick={() => void deleteRecord(CLOUD_TABLE.weightRecords, record.id)}
                 >
                   删除
                 </button>
@@ -176,45 +260,6 @@ export function GrowthPage() {
             ))}
           </div>
         )}
-      </Card>
-
-      <Card title="成长相册" icon="📷">
-        <PhotoStrip photos={records.growthPhotos} />
-        <div className="divider" />
-        <form onSubmit={handleAddPhoto}>
-          <div className="grid-2">
-            <div className="field">
-              <label htmlFor="photo-date">日期</label>
-              <input
-                id="photo-date"
-                type="date"
-                value={photoForm.date}
-                onChange={(e) => setPhotoForm((p) => ({ ...p, date: e.target.value }))}
-              />
-            </div>
-            <div className="field">
-              <label htmlFor="photo-caption">一句话说明</label>
-              <input
-                id="photo-caption"
-                value={photoForm.caption}
-                placeholder="可选"
-                onChange={(e) => setPhotoForm((p) => ({ ...p, caption: e.target.value }))}
-              />
-            </div>
-          </div>
-          <label className="btn btn-ghost btn-block" style={{ marginBottom: 10 }}>
-            {photoData ? '已选择照片，点击重新选择' : '选择照片'}
-            <input
-              type="file"
-              accept="image/*"
-              style={{ display: 'none' }}
-              onChange={(event) => void onPhotoChange(event)}
-            />
-          </label>
-          <button className="btn btn-primary btn-block" type="submit" disabled={!photoData}>
-            上传照片
-          </button>
-        </form>
       </Card>
     </>
   );

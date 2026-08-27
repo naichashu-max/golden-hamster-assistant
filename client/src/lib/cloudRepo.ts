@@ -4,8 +4,8 @@ import { supabase } from './supabase';
 import { newId, nowIso } from './id';
 import type {
   ActivityRecord,
-  BathRecord,
   BeddingRecord,
+  CleaningRecord,
   DrinkingRecord,
   FeedingRecord,
   GrowthPhoto,
@@ -14,7 +14,6 @@ import type {
 } from '../types';
 import type {
   ActivityRecordInput,
-  BathRecordInput,
   BeddingRecordInput,
   DrinkingRecordInput,
   FeedingRecordInput,
@@ -22,6 +21,9 @@ import type {
   PetInput,
   WeightRecordInput,
 } from './repository';
+
+/** 清洁记录的输入类型（新增字段较多，直接在此定义）。 */
+export type CleaningRecordInput = Omit<CleaningRecord, 'id' | 'createdAt'>;
 
 // Postgres 行类型（蛇形命名）；无模式校验时用宽松类型。
 type Row = Record<string, any>;
@@ -33,10 +35,13 @@ const TABLE = {
   feedingRecords: 'feeding_records',
   drinkingRecords: 'drinking_records',
   beddingRecords: 'bedding_records',
-  bathRecords: 'bath_records',
+  cleaningRecords: 'cleaning_records',
   activityRecords: 'activity_records',
   dailyReports: 'daily_reports',
 } as const;
+
+/** 云数据表名，页面删除记录时使用。 */
+export const CLOUD_TABLE = TABLE;
 
 const ZERO_UUID = '00000000-0000-0000-0000-000000000000';
 
@@ -128,6 +133,7 @@ const mapPhoto = (row: Row): GrowthPhoto => ({
   date: row.date,
   photo: row.photo,
   caption: row.caption ?? undefined,
+  tag: row.tag ?? undefined,
   createdAt: row.created_at,
 });
 
@@ -159,11 +165,12 @@ const mapBedding = (row: Row): BeddingRecord => ({
   createdAt: row.created_at,
 });
 
-const mapBath = (row: Row): BathRecord => ({
+const mapCleaning = (row: Row): CleaningRecord => ({
   id: row.id,
   petId: row.pet_id,
   date: row.date,
-  bathType: row.bath_type ?? 'other',
+  taskType: row.task_type === 'deep' ? 'deep' : 'spot',
+  beddingType: row.bedding_type ?? undefined,
   note: row.note ?? undefined,
   createdAt: row.created_at,
 });
@@ -189,7 +196,8 @@ export const listDrinkingRecords = (petId: string) =>
   listForPet(TABLE.drinkingRecords, petId, mapDrinking);
 export const listBeddingRecords = (petId: string) =>
   listForPet(TABLE.beddingRecords, petId, mapBedding);
-export const listBathRecords = (petId: string) => listForPet(TABLE.bathRecords, petId, mapBath);
+export const listCleaningRecords = (petId: string) =>
+  listForPet(TABLE.cleaningRecords, petId, mapCleaning);
 export const listActivityRecords = (petId: string) =>
   listForPet(TABLE.activityRecords, petId, mapActivity);
 
@@ -223,6 +231,7 @@ export async function addGrowthPhoto(input: GrowthPhotoInput): Promise<GrowthPho
       date: record.date,
       photo: record.photo,
       caption: record.caption ?? null,
+      tag: record.tag ?? null,
       created_at: record.createdAt,
     })
     .select()
@@ -286,22 +295,23 @@ export async function addBeddingRecord(input: BeddingRecordInput): Promise<Beddi
   return mapBedding(data);
 }
 
-export async function addBathRecord(input: BathRecordInput): Promise<BathRecord> {
+export async function addCleaningRecord(input: CleaningRecordInput): Promise<CleaningRecord> {
   const record = withMeta(input);
   const { data, error } = await supabase
-    .from(TABLE.bathRecords)
+    .from(TABLE.cleaningRecords)
     .insert({
       id: record.id,
       pet_id: record.petId,
       date: record.date,
-      bath_type: record.bathType,
+      task_type: record.taskType,
+      bedding_type: record.beddingType ?? null,
       note: record.note ?? null,
       created_at: record.createdAt,
     })
     .select()
     .single();
   if (error) throw error;
-  return mapBath(data);
+  return mapCleaning(data);
 }
 
 export async function addActivityRecord(input: ActivityRecordInput): Promise<ActivityRecord> {
@@ -345,7 +355,7 @@ const BACKUP_TABLES = [
   TABLE.feedingRecords,
   TABLE.drinkingRecords,
   TABLE.beddingRecords,
-  TABLE.bathRecords,
+  TABLE.cleaningRecords,
   TABLE.activityRecords,
   TABLE.dailyReports,
 ];
@@ -438,6 +448,11 @@ export async function seedDemoData(): Promise<void> {
     });
   }
 
-  await addBeddingRecord({ petId: pet.id, date: dateOffset(-5), beddingType: '纸棉' });
-  await addBathRecord({ petId: pet.id, date: dateOffset(-2), bathType: 'sand' });
+  await addCleaningRecord({ petId: pet.id, date: dateOffset(-2), taskType: 'spot' });
+  await addCleaningRecord({
+    petId: pet.id,
+    date: dateOffset(-20),
+    taskType: 'deep',
+    beddingType: '纸棉',
+  });
 }

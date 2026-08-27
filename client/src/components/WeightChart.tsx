@@ -47,15 +47,15 @@ export function WeightChart({ points, height = 180 }: WeightChartProps) {
     >
       <defs>
         <linearGradient id="weightArea" x1="0" y1="0" x2="0" y2="1">
-          <stop offset="0%" stopColor="#E9B45C" stopOpacity="0.35" />
-          <stop offset="100%" stopColor="#E9B45C" stopOpacity="0" />
+          <stop offset="0%" stopColor="#E8C98B" stopOpacity="0.4" />
+          <stop offset="100%" stopColor="#E8C98B" stopOpacity="0" />
         </linearGradient>
       </defs>
       <path d={areaPath} fill="url(#weightArea)" />
       <path
         d={linePath}
         fill="none"
-        stroke="#D98E5F"
+        stroke="#EAA44A"
         strokeWidth="3"
         strokeLinecap="round"
         strokeLinejoin="round"
@@ -67,18 +67,18 @@ export function WeightChart({ points, height = 180 }: WeightChartProps) {
           cy={y(p.weight)}
           r="4"
           fill="#fff"
-          stroke="#D98E5F"
+          stroke="#EAA44A"
           strokeWidth="2"
         />
       ))}
-      <text x={x(0)} y={height - 8} textAnchor="middle" fill="#9A8B7C" fontSize="11">
+      <text x={x(0)} y={height - 8} textAnchor="middle" fill="#9B8B79" fontSize="11">
         {sorted[0].date.slice(5)}
       </text>
       <text
         x={x(sorted.length - 1)}
         y={height - 8}
         textAnchor="middle"
-        fill="#9A8B7C"
+        fill="#9B8B79"
         fontSize="11"
       >
         {sorted[sorted.length - 1].date.slice(5)}

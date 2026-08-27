@@ -6,8 +6,8 @@ import * as repo from '../lib/cloudRepo';
 import { supabase, translateAuthError } from '../lib/supabase';
 import type {
   ActivityRecord,
-  BathRecord,
   BeddingRecord,
+  CleaningRecord,
   DrinkingRecord,
   FeedingRecord,
   GrowthPhoto,
@@ -16,7 +16,6 @@ import type {
 } from '../types';
 import type {
   ActivityRecordInput,
-  BathRecordInput,
   BeddingRecordInput,
   DrinkingRecordInput,
   FeedingRecordInput,
@@ -31,7 +30,7 @@ export interface RecordsState {
   feedingRecords: FeedingRecord[];
   drinkingRecords: DrinkingRecord[];
   beddingRecords: BeddingRecord[];
-  bathRecords: BathRecord[];
+  cleaningRecords: CleaningRecord[];
   activityRecords: ActivityRecord[];
 }
 
@@ -46,7 +45,7 @@ const EMPTY_RECORDS: RecordsState = {
   feedingRecords: [],
   drinkingRecords: [],
   beddingRecords: [],
-  bathRecords: [],
+  cleaningRecords: [],
   activityRecords: [],
 };
 
@@ -66,7 +65,7 @@ interface AppContextValue {
   addFeedingRecord: (input: FeedingRecordInput) => Promise<void>;
   addDrinkingRecord: (input: DrinkingRecordInput) => Promise<void>;
   addBeddingRecord: (input: BeddingRecordInput) => Promise<void>;
-  addBathRecord: (input: BathRecordInput) => Promise<void>;
+  addCleaningRecord: (input: repo.CleaningRecordInput) => Promise<void>;
   addActivityRecord: (input: ActivityRecordInput) => Promise<void>;
   deleteRecord: (store: string, id: string) => Promise<void>;
   signIn: (email: string, password: string) => Promise<void>;
@@ -84,7 +83,7 @@ async function loadRecords(petId: string): Promise<RecordsState> {
     feedingRecords,
     drinkingRecords,
     beddingRecords,
-    bathRecords,
+    cleaningRecords,
     activityRecords,
   ] = await Promise.all([
     repo.listWeightRecords(petId),
@@ -92,7 +91,7 @@ async function loadRecords(petId: string): Promise<RecordsState> {
     repo.listFeedingRecords(petId),
     repo.listDrinkingRecords(petId),
     repo.listBeddingRecords(petId),
-    repo.listBathRecords(petId),
+    repo.listCleaningRecords(petId),
     repo.listActivityRecords(petId),
   ]);
   return {
@@ -101,7 +100,7 @@ async function loadRecords(petId: string): Promise<RecordsState> {
     feedingRecords,
     drinkingRecords,
     beddingRecords,
-    bathRecords,
+    cleaningRecords,
     activityRecords,
   };
 }
@@ -229,9 +228,9 @@ export function AppProvider({ children }: { children: ReactNode }) {
     [activePetId, refreshRecords],
   );
 
-  const addBathRecord = useCallback(
-    async (input: BathRecordInput) => {
-      await repo.addBathRecord(input);
+  const addCleaningRecord = useCallback(
+    async (input: repo.CleaningRecordInput) => {
+      await repo.addCleaningRecord(input);
       if (activePetId) await refreshRecords(activePetId);
     },
     [activePetId, refreshRecords],
@@ -297,7 +296,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
       addFeedingRecord,
       addDrinkingRecord,
       addBeddingRecord,
-      addBathRecord,
+      addCleaningRecord,
       addActivityRecord,
       deleteRecord,
       signIn,
@@ -321,7 +320,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
       addFeedingRecord,
       addDrinkingRecord,
       addBeddingRecord,
-      addBathRecord,
+      addCleaningRecord,
       addActivityRecord,
       deleteRecord,
       signIn,

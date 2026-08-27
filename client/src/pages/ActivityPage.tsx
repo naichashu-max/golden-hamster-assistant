@@ -62,12 +62,7 @@ export function ActivityPage() {
       <Card title="每日报告" icon="📝">
         <div className="grid-3" style={{ marginBottom: 12 }}>
           <div className="metric">
-            <span className="metric-icon">❤️</span>
-            <span className="metric-value">{health.score}</span>
-            <span className="metric-label">健康评分</span>
-          </div>
-          <div className="metric">
-            <span className="metric-icon">🏃</span>
+            <span className="metric-icon">🌙</span>
             <span className="metric-value">{formatNumber(latest?.wheelMinutes ?? 0, 0)}</span>
             <span className="metric-label">跑轮(分钟)</span>
           </div>
@@ -75,6 +70,11 @@ export function ActivityPage() {
             <span className="metric-icon">✨</span>
             <span className="metric-value">{latest ? `${latest.activeLevel}/5` : '—'}</span>
             <span className="metric-label">活跃度</span>
+          </div>
+          <div className="metric">
+            <span className="metric-icon">📅</span>
+            <span className="metric-value">{records.activityRecords.length}</span>
+            <span className="metric-label">记录天数</span>
           </div>
         </div>
         <p style={{ margin: '0 0 6px', fontWeight: 700 }}>今日小结</p>

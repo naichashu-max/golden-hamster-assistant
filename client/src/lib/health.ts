@@ -1,11 +1,21 @@
-// 健康评分引擎：根据体重、食量、活跃度趋势生成 0-100 分与温和提醒。
-// 重要原则：只做饲养提醒，不输出任何疾病诊断。
+// 健康分析引擎：体重趋势 + 食量 + 活跃度，输出温和提醒。
+// 关键规则：
+//   1. 成年金丝熊正常参考体重 120g~180g；
+//   2. 连续两次体重环比下降超过 10% 时触发黄色警报并给出排查清单；
+//   3. 只做饲养提醒，不做疾病诊断。
 import {
+  ADULT_WEIGHT,
   HEALTH_WEIGHTS,
-  WEIGHT_CHANGE_ALERT_RATIO,
-  WEIGHT_CHANGE_WARN_RATIO,
+  WEIGHT_DROP_ALERT_RATIO,
+  WEIGHT_DROP_ALERT_STREAK,
 } from './constants';
-import type { ActivityRecord, FeedingRecord, HealthResult, WeightRecord } from '../types';
+import type {
+  ActivityRecord,
+  FeedingRecord,
+  HealthAlert,
+  HealthResult,
+  WeightRecord,
+} from '../types';
 import { formatNumber } from './format';
 
 interface HealthInput {
@@ -17,6 +27,7 @@ interface HealthInput {
 interface Dimension {
   score: number;
   message: string;
+  alert?: HealthAlert | null;
 }
 
 /** 把按日期升序的记录切成“近期”与“之前”两段，各最多 take 条。 */
@@ -33,21 +44,54 @@ function weightDimension(weights: WeightRecord[]): Dimension {
   }
 
   const latest = sorted[sorted.length - 1];
-  const { recent, previous } = splitRecentAndPrevious(sorted);
-  const average = (list: WeightRecord[]) => list.reduce((sum, r) => sum + r.weight, 0) / list.length;
-  const recentAvg = average(recent);
-  const previousAvg = previous.length > 0 ? average(previous) : recentAvg;
-  const ratio = Math.abs(recentAvg - previousAvg) / Math.max(previousAvg, 0.01);
+  const inRange = latest.weight >= ADULT_WEIGHT.min && latest.weight <= ADULT_WEIGHT.max;
+  const direction = latest.weight < ADULT_WEIGHT.min ? '低于' : '高于';
+  const rangeText = `当前 ${formatNumber(latest.weight)}g，${inRange ? '处于' : `${direction}`}成年金丝熊 ${ADULT_WEIGHT.min}-${ADULT_WEIGHT.max}g 参考区间`;
 
-  if (ratio <= WEIGHT_CHANGE_WARN_RATIO) {
-    return { score: 100, message: `体重 ${formatNumber(latest.weight)}g，近期稳定。` };
+  // 连续环比下降检测
+  let streak = 0;
+  for (let i = 1; i < sorted.length; i += 1) {
+    const previous = sorted[i - 1].weight;
+    const current = sorted[i].weight;
+    if (previous > 0 && (previous - current) / previous > WEIGHT_DROP_ALERT_RATIO) {
+      streak += 1;
+    } else {
+      streak = 0;
+    }
   }
-  if (ratio <= WEIGHT_CHANGE_ALERT_RATIO) {
-    const direction = recentAvg > previousAvg ? '小幅上升' : '小幅下降';
-    return { score: 70, message: `体重近期${direction}，建议连续观察。` };
+
+  if (streak >= WEIGHT_DROP_ALERT_STREAK) {
+    return {
+      score: 45,
+      message: `连续 ${streak} 次体重环比下降超过 10%，需要留意。${rangeText}。`,
+      alert: {
+        title: '体重黄色警报',
+        checklist: [
+          '检查牙齿：是否有过长、断牙或咬合不正',
+          '观察排泄：是否软便、拉稀',
+          '摸摸颊囊：是否对称、有无硬块或异味',
+          '若状态持续异常，请及时咨询有经验的兽医',
+        ],
+      },
+    };
   }
-  const direction = recentAvg > previousAvg ? '明显上升' : '明显下降';
-  return { score: 40, message: `体重近期${direction}，请留意饮食和活动。` };
+
+  // 最近一次明显下降（未到连续两次）
+  if (sorted.length >= 2) {
+    const previous = sorted[sorted.length - 2].weight;
+    if (previous > 0 && (previous - latest.weight) / previous > WEIGHT_DROP_ALERT_RATIO) {
+      return { score: 70, message: `最近一次体重环比下降超过 10%，请先观察一天再称。${rangeText}。` };
+    }
+  }
+
+  if (!inRange) {
+    return {
+      score: 78,
+      message: `${rangeText}（幼年金丝熊体重可能更轻，属正常现象）。`,
+    };
+  }
+
+  return { score: 100, message: `体重 ${formatNumber(latest.weight)}g，近期稳定。` };
 }
 
 function foodDimension(feeding: FeedingRecord[]): Dimension {
@@ -118,9 +162,15 @@ export function computeHealth(input: HealthInput): HealthResult {
     activity.score >= 90 ? '活动正常' : activity.score >= 70 ? '活动一般' : '活动偏少';
 
   const reminders: string[] = [];
-  if (weight.score <= 70) reminders.push('体重有波动时先连续观察几天，坚持记录每日体重。');
-  if (food.score <= 60) reminders.push('食量变化可能和换粮、天气有关，先保持观察，不要频繁更换食谱。');
-  if (activity.score <= 70) reminders.push('活动减少时，检查笼内温度、垫料厚度和跑轮是否顺滑。');
+  if (weight.score <= 70) {
+    reminders.push('体重有波动时先连续观察几天，坚持记录每日体重，并留意牙齿、排泄与颊囊。');
+  }
+  if (food.score <= 60) {
+    reminders.push('食量变化可能和换粮、天气有关，先保持观察，不要频繁更换食谱。');
+  }
+  if (activity.score <= 70) {
+    reminders.push('活动减少时，检查笼内温度、垫料厚度和跑轮是否顺滑。');
+  }
   reminders.push('以上只是饲养提醒，不是诊断；若持续异常，请咨询有经验的兽医。');
 
   return {
@@ -132,5 +182,15 @@ export function computeHealth(input: HealthInput): HealthResult {
       { label: '食量变化', score: food.score, message: food.message },
       { label: '活跃度变化', score: activity.score, message: activity.message },
     ],
+    alert: weight.alert ?? null,
   };
+}
+
+/** 顶部问候卡的状态文案：只表达观察到的状态，不做诊断。 */
+export function getPetStatus(health: HealthResult, latestActivity?: ActivityRecord): string {
+  if (health.alert) return '需要留意';
+  if (!latestActivity) return '刚安顿下来，慢慢熟悉中';
+  if (latestActivity.activeLevel >= 4) return '活蹦乱跳';
+  if (latestActivity.activeLevel >= 3) return '状态平稳';
+  return '有点安静';
 }

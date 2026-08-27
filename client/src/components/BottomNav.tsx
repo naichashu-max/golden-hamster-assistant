@@ -7,6 +7,7 @@ const NAV_ITEMS = [
   { to: '/care', label: '日常', icon: '🛁' },
   { to: '/activity', label: '活动', icon: '🌙' },
   { to: '/health', label: '健康', icon: '❤️' },
+  { to: '/wiki', label: '百科', icon: '📚' },
 ];
 
 export function BottomNav() {

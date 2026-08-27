@@ -1,15 +1,41 @@
-// 首页：我的金丝熊、今日状态、最近照片、成长曲线。
+// 首页：温馨问候卡 + 今日快捷打卡 + 最近照片 + 成长曲线。
 import { Link, useNavigate } from 'react-router-dom';
 import { Card } from '../components/Card';
 import { PhotoStrip } from '../components/PhotoStrip';
-import { ProgressRing } from '../components/ProgressRing';
 import { WeightChart } from '../components/WeightChart';
 import { useApp } from '../context/AppContext';
-import { ageText, formatNumber } from '../lib/format';
-import { computeHealth } from '../lib/health';
+import { ageText, daysBetween, todayStr } from '../lib/format';
+import { computeHealth, getPetStatus } from '../lib/health';
+import type { FoodType } from '../types';
+
+interface CapsuleProps {
+  done: boolean;
+  icon: string;
+  label: string;
+  onClick: () => void;
+}
+
+/** 快捷打卡胶囊：点击即记录，完成后显示已打卡状态。 */
+function CheckCapsule({ done, icon, label, onClick }: CapsuleProps) {
+  return (
+    <button
+      type="button"
+      className={`check-capsule${done ? ' done' : ''}`}
+      onClick={onClick}
+      disabled={done}
+    >
+      <span className="check-icon" aria-hidden>
+        {icon}
+      </span>
+      <span className="check-label">{label}</span>
+      <span className="check-state">{done ? '✓ 已打卡' : '点击打卡'}</span>
+    </button>
+  );
+}
 
 export function HomePage() {
-  const { activePet, records, loading, resetDemo } = useApp();
+  const { activePet, records, loading, resetDemo, addDrinkingRecord, addFeedingRecord } =
+    useApp();
   const navigate = useNavigate();
 
   if (loading) {
@@ -31,7 +57,7 @@ export function HomePage() {
           创建档案
         </button>
         <div style={{ marginTop: 8 }}>
-          <button className="btn btn-ghost" onClick={resetDemo}>
+          <button className="btn btn-ghost" onClick={() => void resetDemo()}>
             载入示例数据
           </button>
         </div>
@@ -44,82 +70,107 @@ export function HomePage() {
     feeding: records.feedingRecords,
     activity: records.activityRecords,
   });
-  const latestWeight = records.weightRecords[records.weightRecords.length - 1]?.weight;
   const latestActivity = records.activityRecords[records.activityRecords.length - 1];
+  const status = getPetStatus(health, latestActivity);
+  const today = todayStr();
+  const daysAtHome = Math.max(1, daysBetween(activePet.createdAt.slice(0, 10), today) + 1);
+
+  const waterDone = records.drinkingRecords.some((r) => r.date === today);
+  const foodDone = (type: FoodType) =>
+    records.feedingRecords.some((r) => r.date === today && r.foodType === type);
+
+  const checkWater = async () => {
+    if (waterDone) return;
+    await addDrinkingRecord({ petId: activePet.id, date: today });
+  };
+  const checkFood = async (type: FoodType) => {
+    if (foodDone(type)) return;
+    await addFeedingRecord({ petId: activePet.id, date: today, foodType: type });
+  };
 
   return (
     <>
-      <header className="page-head">
-        <div>
-          <h1 className="page-title">我的金丝熊</h1>
-          <div className="page-subtitle">记录它每天的小日子</div>
-        </div>
-        <Link className="icon-link" to="/settings" aria-label="设置">
-          ⚙️
-        </Link>
-      </header>
-
-      {/* 宠物档案摘要 */}
+      {/* 温馨问候卡：不显示生硬的评分数字 */}
       <Card>
-        <div style={{ display: 'flex', gap: 14, alignItems: 'center' }}>
+        <div className="greeting">
           <div className="avatar">
             {activePet.photo ? <img src={activePet.photo} alt={activePet.name} /> : '🐹'}
           </div>
-          <div style={{ flex: 1, minWidth: 0 }}>
-            <div style={{ display: 'flex', alignItems: 'baseline', gap: 8 }}>
-              <span style={{ fontSize: 20, fontWeight: 800 }}>{activePet.name}</span>
-              <span className="muted text-sm">{ageText(activePet.birthDate)}</span>
-            </div>
-            <div className="muted text-sm">
-              {activePet.breed}
-              {activePet.personality ? ` · ${activePet.personality}` : ''}
+          <div className="greeting-main">
+            <div className="greeting-title">已来到新家第 {daysAtHome} 天</div>
+            <div className="greeting-status">状态：{status} 🐹</div>
+            <div className="greeting-meta">
+              {activePet.name} · {ageText(activePet.birthDate)} · {activePet.breed}
             </div>
           </div>
-          <Link to={`/pet/${activePet.id}`} className="btn btn-ghost" style={{ padding: '8px 14px' }}>
-            编辑
+          <Link className="icon-link" to={`/pet/${activePet.id}`} aria-label="编辑档案">
+            ✏️
           </Link>
         </div>
       </Card>
 
-      {/* 今日状态 */}
-      <Card title="今日状态" icon="✨">
-        <div style={{ display: 'flex', gap: 16, alignItems: 'center' }}>
-          <ProgressRing value={health.score} size={100} stroke={9}>
-            <div style={{ fontSize: 26, fontWeight: 800 }}>{health.score}</div>
-            <div className="muted" style={{ fontSize: 11 }}>
-              健康评分
-            </div>
-          </ProgressRing>
-          <div style={{ flex: 1, display: 'grid', gap: 10 }}>
-            <div className="metric" style={{ textAlign: 'left', display: 'flex', alignItems: 'center', gap: 10 }}>
-              <span className="metric-icon" style={{ margin: 0 }}>
-                ⚖️
-              </span>
-              <div>
-                <div className="metric-value">{formatNumber(latestWeight)}g</div>
-                <div className="metric-label">最新体重</div>
-              </div>
-            </div>
-            <div className="metric" style={{ textAlign: 'left', display: 'flex', alignItems: 'center', gap: 10 }}>
-              <span className="metric-icon" style={{ margin: 0 }}>
-                🌙
-              </span>
-              <div>
-                <div className="metric-value">{formatNumber(latestActivity?.wheelMinutes ?? 0, 0)}分钟</div>
-                <div className="metric-label">昨晚活动</div>
-              </div>
-            </div>
-          </div>
+      {/* 今日打卡：把繁琐表单变成四个胶囊 */}
+      <Card title="今日打卡" icon="✅">
+        <div className="check-grid">
+          <CheckCapsule
+            done={waterDone}
+            icon="💧"
+            label="换凉开水"
+            onClick={() => void checkWater()}
+          />
+          <CheckCapsule
+            done={foodDone('staple')}
+            icon="🥣"
+            label="添主粮"
+            onClick={() => void checkFood('staple')}
+          />
+          <CheckCapsule
+            done={foodDone('vegetable')}
+            icon="🥦"
+            label="加点新鲜蔬菜"
+            onClick={() => void checkFood('vegetable')}
+          />
+          <CheckCapsule
+            done={foodDone('freeze_dried')}
+            icon="🍗"
+            label="投喂冻干"
+            onClick={() => void checkFood('freeze_dried')}
+          />
         </div>
       </Card>
 
-      {/* 最近照片 */}
-      <Card title="最近照片" icon="📷" action={<Link className="muted text-sm" to="/growth">全部</Link>}>
+      {/* 体重黄色警报：连续两次环比下降超过 10% 时出现 */}
+      {health.alert && (
+        <Card title={health.alert.title} icon="🟡">
+          <ul className="checklist">
+            {health.alert.checklist.map((item) => (
+              <li key={item}>{item}</li>
+            ))}
+          </ul>
+        </Card>
+      )}
+
+      <Card
+        title="最近照片"
+        icon="📷"
+        action={
+          <Link className="muted text-sm" to="/growth">
+            全部
+          </Link>
+        }
+      >
         <PhotoStrip photos={records.growthPhotos.slice(-6)} />
       </Card>
 
-      {/* 成长曲线 */}
-      <Card title="成长曲线" icon="📈" action={<Link className="muted text-sm" to="/growth">更多</Link>}>
+      <Card
+        title="成长曲线"
+        icon="📈"
+        action={
+          <Link className="muted text-sm" to="/growth">
+            更多
+          </Link>
+        }
+      >
         <WeightChart points={records.weightRecords.slice(-7)} />
       </Card>
     </>
