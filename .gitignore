@@ -8,6 +8,9 @@ server/dist/
 # 本地数据库
 server/data/
 
+# 本地临时文件
+work/
+
 # 系统与编辑器
 .DS_Store
 Thumbs.db

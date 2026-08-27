@@ -76,20 +76,20 @@ npm run dev:server   # 默认 http://localhost:4000
 - `database-design.md`：字段契约与 SQL schema
 - `architecture.md`：分层与同步/AI 抽象
 
-## 分享给别人使用
+## 在线访问与分享
 
-前端是纯静态站点，数据保存在每个人自己的浏览器里，因此**只需部署前端**即可分享，
-不需要给每位用户配服务器。
+已在线部署，直接访问：
 
-1. 打包：`npm run build`，产物在 `client/dist`。
-2. 任选一个免费静态托管，上传 `client/dist` 文件夹：
-   - **海外访问**：Vercel、Netlify、Cloudflare Pages（支持拖拽上传或关联 Git 仓库）。
-   - **国内访问**：Gitee Pages、腾讯云 COS 静态网站托管、阿里云 OSS。
-3. 把链接发给朋友。手机浏览器打开后，从菜单选择「添加到主屏幕」，
-   即可像原生 App 一样使用，并支持离线打开（首次联网后）。
+**https://naichashu-max.github.io/golden-hamster-assistant/**
 
-注意：每个人的数据只存在自己的设备里，互相不可见；换手机前请在
-「设置 → 数据备份」导出备份文件。图标可用 `node scripts/generate-icons.mjs` 重新生成。
+前端是纯静态站点，数据保存在每个人自己的浏览器里，互相不可见。把链接发给朋友，
+手机浏览器打开后从菜单选择「添加到主屏幕」，即可像原生 App 一样使用并离线打开。
+
+更新网站：本地修改后运行 `npm run deploy:ghpages` 一键重新发布
+（未配置本机 Git 凭据时，先设置 `GITHUB_TOKEN` 环境变量）。
+图标可用 `node scripts/generate-icons.mjs` 重新生成。
+
+注意：换手机前请在「设置 → 数据备份」导出备份文件。
 
 可选进阶：把 `server/` 部署到 Render / Fly.io 等平台，并在 `client/src/lib/sync.ts`
 中把 `LocalOnlyAdapter` 换成 REST 适配器，即可启用云同步。

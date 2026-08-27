@@ -9,6 +9,7 @@
     "dev:server": "npm --prefix server run dev",
     "build": "npm --prefix client run build",
     "build:server": "npm --prefix server run build",
-    "start:server": "npm --prefix server run start"
+    "start:server": "npm --prefix server run start",
+    "deploy:ghpages": "node scripts/deploy-gh-pages.mjs"
   }
 }
