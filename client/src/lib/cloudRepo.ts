@@ -141,6 +141,7 @@ const mapFeeding = (row: Row): FeedingRecord => ({
   id: row.id,
   petId: row.pet_id,
   date: row.date,
+  time: row.time ?? undefined,
   foodType: row.food_type ?? 'other',
   amount: row.amount == null ? undefined : Number(row.amount),
   note: row.note ?? undefined,
@@ -151,6 +152,7 @@ const mapDrinking = (row: Row): DrinkingRecord => ({
   id: row.id,
   petId: row.pet_id,
   date: row.date,
+  time: row.time ?? undefined,
   amount: row.amount == null ? undefined : Number(row.amount),
   note: row.note ?? undefined,
   createdAt: row.created_at,
@@ -169,6 +171,7 @@ const mapCleaning = (row: Row): CleaningRecord => ({
   id: row.id,
   petId: row.pet_id,
   date: row.date,
+  time: row.time ?? undefined,
   taskType: row.task_type === 'deep' ? 'deep' : 'spot',
   beddingType: row.bedding_type ?? undefined,
   note: row.note ?? undefined,
@@ -179,6 +182,7 @@ const mapActivity = (row: Row): ActivityRecord => ({
   id: row.id,
   petId: row.pet_id,
   date: row.date,
+  time: row.time ?? undefined,
   wheelMinutes: Number(row.wheel_minutes ?? 0),
   activeLevel: Number(row.active_level ?? 3),
   activeTimeRange: row.active_time_range ?? undefined,
@@ -248,6 +252,7 @@ export async function addFeedingRecord(input: FeedingRecordInput): Promise<Feedi
       id: record.id,
       pet_id: record.petId,
       date: record.date,
+      time: record.time ?? null,
       food_type: record.foodType,
       amount: record.amount ?? null,
       note: record.note ?? null,
@@ -267,6 +272,7 @@ export async function addDrinkingRecord(input: DrinkingRecordInput): Promise<Dri
       id: record.id,
       pet_id: record.petId,
       date: record.date,
+      time: record.time ?? null,
       amount: record.amount ?? null,
       note: record.note ?? null,
       created_at: record.createdAt,
@@ -303,6 +309,7 @@ export async function addCleaningRecord(input: CleaningRecordInput): Promise<Cle
       id: record.id,
       pet_id: record.petId,
       date: record.date,
+      time: record.time ?? null,
       task_type: record.taskType,
       bedding_type: record.beddingType ?? null,
       note: record.note ?? null,
@@ -322,6 +329,7 @@ export async function addActivityRecord(input: ActivityRecordInput): Promise<Act
       id: record.id,
       pet_id: record.petId,
       date: record.date,
+      time: record.time ?? null,
       wheel_minutes: record.wheelMinutes,
       active_level: record.activeLevel,
       active_time_range: record.activeTimeRange ?? null,
@@ -436,22 +444,26 @@ export async function seedDemoData(): Promise<void> {
     await addFeedingRecord({
       petId: pet.id,
       date: dateOffset(-i),
+      time: '20:00',
       foodType: 'staple',
       amount: 8 + (i % 2),
     });
     await addActivityRecord({
       petId: pet.id,
       date: dateOffset(-i),
+      time: '23:30',
       wheelMinutes: 70 + i * 3,
       activeLevel: 4,
       activeTimeRange: '22:00-03:00',
     });
   }
 
-  await addCleaningRecord({ petId: pet.id, date: dateOffset(-2), taskType: 'spot' });
+  await addDrinkingRecord({ petId: pet.id, date: dateOffset(-1), time: '08:00' });
+  await addCleaningRecord({ petId: pet.id, date: dateOffset(-2), time: '18:00', taskType: 'spot' });
   await addCleaningRecord({
     petId: pet.id,
     date: dateOffset(-20),
+    time: '14:00',
     taskType: 'deep',
     beddingType: '纸棉',
   });

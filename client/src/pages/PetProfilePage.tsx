@@ -45,6 +45,7 @@ export function PetProfilePage() {
         }
       : DEFAULT_FORM,
   );
+  const [errors, setErrors] = useState<{ name?: string; birthDate?: string }>({});
 
   // 当档案从上下文中异步加载出来后，回填编辑表单。
   useEffect(() => {
@@ -76,7 +77,14 @@ export function PetProfilePage() {
 
   const handleSubmit = async (event: FormEvent) => {
     event.preventDefault();
-    if (!form.name.trim() || !form.birthDate) return;
+    const nextErrors: { name?: string; birthDate?: string } = {};
+    if (!form.name.trim()) nextErrors.name = '请填写名字';
+    if (!form.birthDate) nextErrors.birthDate = '请选择出生日';
+    if (nextErrors.name || nextErrors.birthDate) {
+      setErrors(nextErrors);
+      return;
+    }
+    setErrors({});
     await savePet({
       id: isNew ? undefined : id,
       name: form.name.trim(),
@@ -130,24 +138,32 @@ export function PetProfilePage() {
             </label>
           </div>
 
-          <div className="field">
+          <div className={`field${errors.name ? ' invalid' : ''}`}>
             <label htmlFor="name">名字</label>
             <input
               id="name"
               value={form.name}
               placeholder="比如：团子"
-              onChange={(e) => update('name', e.target.value)}
+              onChange={(e) => {
+                update('name', e.target.value);
+                if (errors.name) setErrors((p) => ({ ...p, name: undefined }));
+              }}
             />
+            {errors.name && <div className="form-error">{errors.name}</div>}
           </div>
 
-          <div className="field">
+          <div className={`field${errors.birthDate ? ' invalid' : ''}`}>
             <label htmlFor="birthDate">出生日</label>
             <input
               id="birthDate"
               type="date"
               value={form.birthDate}
-              onChange={(e) => update('birthDate', e.target.value)}
+              onChange={(e) => {
+                update('birthDate', e.target.value);
+                if (errors.birthDate) setErrors((p) => ({ ...p, birthDate: undefined }));
+              }}
             />
+            {errors.birthDate && <div className="form-error">{errors.birthDate}</div>}
           </div>
 
           <div className="grid-2">

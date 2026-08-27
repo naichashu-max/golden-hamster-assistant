@@ -67,8 +67,11 @@ export function SettingsPage() {
           当前登录：{user?.email ?? '未知邮箱'}
         </p>
         <button className="btn btn-ghost" type="button" onClick={() => void signOut()}>
-          退出登录
+          切换账号
         </button>
+        <p className="muted text-sm" style={{ margin: '10px 0 0' }}>
+          切换后回到登录页，可用其他邮箱登录；当前账号的数据会保存在云端。
+        </p>
       </Card>
 
       <Card title="数据备份" icon="💾">

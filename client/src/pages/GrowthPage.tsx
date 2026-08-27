@@ -21,6 +21,8 @@ export function GrowthPage() {
   });
   const [photoForm, setPhotoForm] = useState({ date: todayStr(), caption: '', tag: '' });
   const [photoData, setPhotoData] = useState('');
+  const [weightError, setWeightError] = useState('');
+  const [photoError, setPhotoError] = useState('');
 
   if (!activePet) {
     return (
@@ -33,8 +35,16 @@ export function GrowthPage() {
 
   const handleAddWeight = async (event: FormEvent) => {
     event.preventDefault();
+    if (!weightForm.date) {
+      setWeightError('请选择日期');
+      return;
+    }
     const weight = Number(weightForm.weight);
-    if (!weightForm.date || Number.isNaN(weight) || weight <= 0) return;
+    if (!weightForm.weight.trim() || Number.isNaN(weight) || weight <= 0) {
+      setWeightError('请填写有效的体重（大于 0）');
+      return;
+    }
+    setWeightError('');
     await addWeightRecord({
       petId: activePet.id,
       date: weightForm.date,
@@ -58,7 +68,15 @@ export function GrowthPage() {
 
   const handleAddPhoto = async (event: FormEvent) => {
     event.preventDefault();
-    if (!photoData || !photoForm.date) return;
+    if (!photoForm.date) {
+      setPhotoError('请选择日期');
+      return;
+    }
+    if (!photoData) {
+      setPhotoError('请先选择一张照片');
+      return;
+    }
+    setPhotoError('');
     await addGrowthPhoto({
       petId: activePet.id,
       date: photoForm.date,
@@ -92,7 +110,10 @@ export function GrowthPage() {
                 id="weight-date"
                 type="date"
                 value={weightForm.date}
-                onChange={(e) => setWeightForm((p) => ({ ...p, date: e.target.value }))}
+                onChange={(e) => {
+                  setWeightForm((p) => ({ ...p, date: e.target.value }));
+                  setWeightError('');
+                }}
               />
             </div>
             <div className="field">
@@ -103,7 +124,10 @@ export function GrowthPage() {
                 inputMode="decimal"
                 placeholder="150"
                 value={weightForm.weight}
-                onChange={(e) => setWeightForm((p) => ({ ...p, weight: e.target.value }))}
+                onChange={(e) => {
+                  setWeightForm((p) => ({ ...p, weight: e.target.value }));
+                  setWeightError('');
+                }}
               />
             </div>
           </div>
@@ -146,6 +170,7 @@ export function GrowthPage() {
             />
           </div>
 
+          {weightError && <div className="form-error" style={{ marginBottom: 10 }}>{weightError}</div>}
           <button className="btn btn-primary btn-block" type="submit">
             保存体重
           </button>
@@ -192,7 +217,10 @@ export function GrowthPage() {
               id="photo-date"
               type="date"
               value={photoForm.date}
-              onChange={(e) => setPhotoForm((p) => ({ ...p, date: e.target.value }))}
+              onChange={(e) => {
+                setPhotoForm((p) => ({ ...p, date: e.target.value }));
+                setPhotoError('');
+              }}
             />
           </div>
           <div className="field">
@@ -230,7 +258,8 @@ export function GrowthPage() {
               onChange={(event) => void onPhotoChange(event)}
             />
           </label>
-          <button className="btn btn-primary btn-block" type="submit" disabled={!photoData}>
+          {photoError && <div className="form-error" style={{ marginBottom: 10 }}>{photoError}</div>}
+          <button className="btn btn-primary btn-block" type="submit">
             冲印这张拍立得
           </button>
         </form>

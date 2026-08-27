@@ -53,6 +53,8 @@ export interface FeedingRecord {
   id: string;
   petId: string;
   date: string;
+  /** 喂食时间，HH:mm */
+  time?: string;
   foodType: FoodType;
   /** 食量（克），可选 */
   amount?: number;
@@ -65,6 +67,8 @@ export interface DrinkingRecord {
   id: string;
   petId: string;
   date: string;
+  /** 换水时间，HH:mm */
+  time?: string;
   /** 饮水量（毫升），可选 */
   amount?: number;
   note?: string;
@@ -78,6 +82,8 @@ export interface CleaningRecord {
   id: string;
   petId: string;
   date: string;
+  /** 清洁时间，HH:mm */
+  time?: string;
   taskType: CleaningTask;
   /** 整笼大扫除时的垫料类型 */
   beddingType?: string;
@@ -100,6 +106,8 @@ export interface ActivityRecord {
   id: string;
   petId: string;
   date: string;
+  /** 活动记录时间，HH:mm */
+  time?: string;
   /** 跑轮时间（分钟） */
   wheelMinutes: number;
   /** 活跃程度评分 1-5 */

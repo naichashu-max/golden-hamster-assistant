@@ -323,6 +323,23 @@ button {
   background: #fff;
 }
 
+.field.invalid input,
+.field.invalid select,
+.field.invalid textarea {
+  border-color: var(--danger);
+  background: #fff;
+}
+
+.field.invalid label {
+  color: var(--danger);
+}
+
+.form-error {
+  color: var(--danger);
+  font-size: 12px;
+  margin-top: 4px;
+}
+
 .chip-row {
   display: flex;
   flex-wrap: wrap;

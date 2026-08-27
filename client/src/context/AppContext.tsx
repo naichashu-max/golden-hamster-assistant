@@ -273,12 +273,14 @@ export function AppProvider({ children }: { children: ReactNode }) {
   }, []);
 
   const signOut = useCallback(async () => {
+    // 记住本次邮箱，方便下次（或切换账号时）自动填充。
+    if (user?.email) localStorage.setItem('hamster-last-email', user.email);
     await supabase.auth.signOut();
     setUser(null);
     setPets([]);
     setRecords(EMPTY_RECORDS);
     setActivePetId(null);
-  }, []);
+  }, [user]);
 
   const resetDemo = useCallback(async () => {
     await repo.clearAllData();

@@ -7,7 +7,7 @@ import { isSupabaseConfigured } from '../lib/supabase';
 export function AuthPage() {
   const { signIn, signUp } = useApp();
   const [mode, setMode] = useState<'login' | 'register'>('login');
-  const [email, setEmail] = useState('');
+  const [email, setEmail] = useState(() => localStorage.getItem('hamster-last-email') ?? '');
   const [password, setPassword] = useState('');
   const [confirm, setConfirm] = useState('');
   const [busy, setBusy] = useState(false);
@@ -37,6 +37,7 @@ export function AuthPage() {
     try {
       if (mode === 'register') {
         const result = await signUp(mail, password);
+        localStorage.setItem('hamster-last-email', mail);
         if (result.needsEmailConfirmation) {
           setNotice({
             type: 'info',
@@ -49,6 +50,7 @@ export function AuthPage() {
         // 未开启邮箱验证时，注册即自动登录，随后由鉴权状态切换进主页。
       } else {
         await signIn(mail, password);
+        localStorage.setItem('hamster-last-email', mail);
       }
     } catch (error) {
       setNotice({

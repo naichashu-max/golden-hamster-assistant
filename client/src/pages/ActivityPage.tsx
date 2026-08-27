@@ -3,7 +3,7 @@ import { useState } from 'react';
 import type { FormEvent } from 'react';
 import { Card } from '../components/Card';
 import { useApp } from '../context/AppContext';
-import { formatDate, formatNumber, todayStr } from '../lib/format';
+import { formatDateTime, formatNumber, nowTime, todayStr } from '../lib/format';
 import { computeHealth } from '../lib/health';
 import { STORES } from '../lib/idb';
 
@@ -13,11 +13,13 @@ export function ActivityPage() {
   const { activePet, records, addActivityRecord, deleteRecord } = useApp();
   const [form, setForm] = useState({
     date: todayStr(),
+    time: nowTime(),
     wheelMinutes: '',
     activeLevel: '4',
     activeTimeRange: '22:00-03:00',
     note: '',
   });
+  const [formError, setFormError] = useState('');
 
   if (!activePet) {
     return (
@@ -37,11 +39,20 @@ export function ActivityPage() {
 
   const handleSubmit = async (event: FormEvent) => {
     event.preventDefault();
+    if (!form.date) {
+      setFormError('请选择日期');
+      return;
+    }
     const wheelMinutes = Number(form.wheelMinutes);
-    if (!form.date || Number.isNaN(wheelMinutes) || wheelMinutes < 0) return;
+    if (!form.wheelMinutes.trim() || Number.isNaN(wheelMinutes) || wheelMinutes < 0) {
+      setFormError('请填写有效的跑轮时间（分钟）');
+      return;
+    }
+    setFormError('');
     await addActivityRecord({
       petId: activePet.id,
       date: form.date,
+      time: form.time || undefined,
       wheelMinutes,
       activeLevel: Number(form.activeLevel),
       activeTimeRange: form.activeTimeRange.trim() || undefined,
@@ -86,13 +97,26 @@ export function ActivityPage() {
       <Card title="记录昨晚活动" icon="🌙">
         <form onSubmit={handleSubmit}>
           <div className="grid-2">
-            <div className="field">
-              <label>日期</label>
-              <input
-                type="date"
-                value={form.date}
-                onChange={(e) => setForm((p) => ({ ...p, date: e.target.value }))}
-              />
+            <div className="grid-2">
+              <div className="field">
+                <label>日期</label>
+                <input
+                  type="date"
+                  value={form.date}
+                  onChange={(e) => {
+                    setForm((p) => ({ ...p, date: e.target.value }));
+                    setFormError('');
+                  }}
+                />
+              </div>
+              <div className="field">
+                <label>时间</label>
+                <input
+                  type="time"
+                  value={form.time}
+                  onChange={(e) => setForm((p) => ({ ...p, time: e.target.value }))}
+                />
+              </div>
             </div>
             <div className="field">
               <label>跑轮时间 (分钟)</label>
@@ -101,7 +125,10 @@ export function ActivityPage() {
                 inputMode="numeric"
                 value={form.wheelMinutes}
                 placeholder="76"
-                onChange={(e) => setForm((p) => ({ ...p, wheelMinutes: e.target.value }))}
+                onChange={(e) => {
+                  setForm((p) => ({ ...p, wheelMinutes: e.target.value }));
+                  setFormError('');
+                }}
               />
             </div>
           </div>
@@ -139,6 +166,7 @@ export function ActivityPage() {
             />
           </div>
 
+          {formError && <div className="form-error" style={{ marginBottom: 10 }}>{formError}</div>}
           <button className="btn btn-primary btn-block" type="submit">
             保存活动记录
           </button>
@@ -156,7 +184,7 @@ export function ActivityPage() {
                   <div>
                     {formatNumber(record.wheelMinutes, 0)} 分钟 · 活跃度 {record.activeLevel}/5
                   </div>
-                  <div className="record-date">{formatDate(record.date)}</div>
+                  <div className="record-date">{formatDateTime(record.date, record.time)}</div>
                 </div>
                 <button
                   className="delete-btn"

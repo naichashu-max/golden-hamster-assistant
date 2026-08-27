@@ -9,6 +9,11 @@ export function todayStr(date = new Date()): string {
   return `${date.getFullYear()}-${pad2(date.getMonth() + 1)}-${pad2(date.getDate())}`;
 }
 
+/** 当前时间的 HH:mm 文本 */
+export function nowTime(date = new Date()): string {
+  return `${pad2(date.getHours())}:${pad2(date.getMinutes())}`;
+}
+
 /** 在指定日期字符串上加/减天数 */
 export function addDays(dateStr: string, days: number): string {
   const d = new Date(`${dateStr}T00:00:00`);
@@ -27,6 +32,11 @@ export function daysBetween(from: string, to: string): number {
 export function formatDate(dateStr: string): string {
   const d = new Date(`${dateStr}T00:00:00`);
   return `${d.getMonth() + 1}月${d.getDate()}日`;
+}
+
+/** 日期 + 可选时间，用于列表展示 */
+export function formatDateTime(dateStr: string, time?: string): string {
+  return time ? `${formatDate(dateStr)} ${time}` : formatDate(dateStr);
 }
 
 /** 计算年龄文字，如 “7个月12天” */

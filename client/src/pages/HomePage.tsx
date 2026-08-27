@@ -4,7 +4,7 @@ import { Card } from '../components/Card';
 import { PhotoStrip } from '../components/PhotoStrip';
 import { WeightChart } from '../components/WeightChart';
 import { useApp } from '../context/AppContext';
-import { ageText, daysBetween, todayStr } from '../lib/format';
+import { ageText, daysBetween, nowTime, todayStr } from '../lib/format';
 import { computeHealth, getPetStatus } from '../lib/health';
 import type { FoodType } from '../types';
 
@@ -81,11 +81,11 @@ export function HomePage() {
 
   const checkWater = async () => {
     if (waterDone) return;
-    await addDrinkingRecord({ petId: activePet.id, date: today });
+    await addDrinkingRecord({ petId: activePet.id, date: today, time: nowTime() });
   };
   const checkFood = async (type: FoodType) => {
     if (foodDone(type)) return;
-    await addFeedingRecord({ petId: activePet.id, date: today, foodType: type });
+    await addFeedingRecord({ petId: activePet.id, date: today, time: nowTime(), foodType: type });
   };
 
   return (

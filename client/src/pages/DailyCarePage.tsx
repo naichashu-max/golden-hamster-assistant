@@ -5,13 +5,14 @@ import type { FormEvent, ReactNode } from 'react';
 import { Card } from '../components/Card';
 import { useApp } from '../context/AppContext';
 import { CLEANING_LABELS, FOOD_TYPE_LABELS } from '../lib/constants';
-import { careDueText, formatDate, todayStr } from '../lib/format';
+import { careDueText, formatDate, formatDateTime, nowTime, todayStr } from '../lib/format';
 import { computeCareStatus } from '../lib/care';
 import { CLOUD_TABLE } from '../lib/cloudRepo';
 
 interface RowItem {
   id: string;
   date: string;
+  time?: string;
 }
 
 function RecordRows<T extends RowItem>({
@@ -30,7 +31,7 @@ function RecordRows<T extends RowItem>({
         <div className="record-item" key={item.id}>
           <div className="record-main">
             {render(item)}
-            <div className="record-date">{formatDate(item.date)}</div>
+            <div className="record-date">{formatDateTime(item.date, item.time)}</div>
           </div>
           <button className="delete-btn" type="button" onClick={() => onDelete(item.id)}>
             删除
@@ -43,8 +44,15 @@ function RecordRows<T extends RowItem>({
 
 export function DailyCarePage() {
   const { activePet, records, addCleaningRecord, deleteRecord } = useApp();
-  const [spot, setSpot] = useState({ date: todayStr(), note: '' });
-  const [deep, setDeep] = useState({ date: todayStr(), beddingType: '纸棉', note: '' });
+  const [spot, setSpot] = useState({ date: todayStr(), time: nowTime(), note: '' });
+  const [deep, setDeep] = useState({
+    date: todayStr(),
+    time: nowTime(),
+    beddingType: '纸棉',
+    note: '',
+  });
+  const [spotError, setSpotError] = useState('');
+  const [deepError, setDeepError] = useState('');
 
   if (!activePet) {
     return (
@@ -63,10 +71,15 @@ export function DailyCarePage() {
 
   const submitSpot = async (event: FormEvent) => {
     event.preventDefault();
-    if (!spot.date) return;
+    if (!spot.date) {
+      setSpotError('请选择日期');
+      return;
+    }
+    setSpotError('');
     await addCleaningRecord({
       petId: activePet.id,
       date: spot.date,
+      time: spot.time || undefined,
       taskType: 'spot',
       note: spot.note.trim() || undefined,
     });
@@ -75,10 +88,19 @@ export function DailyCarePage() {
 
   const submitDeep = async (event: FormEvent) => {
     event.preventDefault();
-    if (!deep.date || !deep.beddingType.trim()) return;
+    if (!deep.date) {
+      setDeepError('请选择日期');
+      return;
+    }
+    if (!deep.beddingType.trim()) {
+      setDeepError('请填写垫料类型');
+      return;
+    }
+    setDeepError('');
     await addCleaningRecord({
       petId: activePet.id,
       date: deep.date,
+      time: deep.time || undefined,
       taskType: 'deep',
       beddingType: deep.beddingType.trim(),
       note: deep.note.trim() || undefined,
@@ -117,13 +139,26 @@ export function DailyCarePage() {
           建议 2~3 天清理一次尿沙和粪便，保持干燥卫生。
         </p>
         <form onSubmit={submitSpot}>
-          <div className="field">
-            <label>日期</label>
-            <input
-              type="date"
-              value={spot.date}
-              onChange={(e) => setSpot((p) => ({ ...p, date: e.target.value }))}
-            />
+          <div className="grid-2">
+            <div className="field">
+              <label>日期</label>
+              <input
+                type="date"
+                value={spot.date}
+                onChange={(e) => {
+                  setSpot((p) => ({ ...p, date: e.target.value }));
+                  setSpotError('');
+                }}
+              />
+            </div>
+            <div className="field">
+              <label>时间</label>
+              <input
+                type="time"
+                value={spot.time}
+                onChange={(e) => setSpot((p) => ({ ...p, time: e.target.value }))}
+              />
+            </div>
           </div>
           <div className="field">
             <label>备注（可选）</label>
@@ -133,6 +168,7 @@ export function DailyCarePage() {
               onChange={(e) => setSpot((p) => ({ ...p, note: e.target.value }))}
             />
           </div>
+          {spotError && <div className="form-error" style={{ marginBottom: 10 }}>{spotError}</div>}
           <button className="btn btn-primary btn-block" type="submit">
             记一次局部清理
           </button>
@@ -150,17 +186,31 @@ export function DailyCarePage() {
               <input
                 type="date"
                 value={deep.date}
-                onChange={(e) => setDeep((p) => ({ ...p, date: e.target.value }))}
+                onChange={(e) => {
+                  setDeep((p) => ({ ...p, date: e.target.value }));
+                  setDeepError('');
+                }}
               />
             </div>
             <div className="field">
-              <label>新垫料类型</label>
+              <label>时间</label>
               <input
-                value={deep.beddingType}
-                placeholder="纸棉 / 软木屑"
-                onChange={(e) => setDeep((p) => ({ ...p, beddingType: e.target.value }))}
+                type="time"
+                value={deep.time}
+                onChange={(e) => setDeep((p) => ({ ...p, time: e.target.value }))}
               />
             </div>
+          </div>
+          <div className="field">
+            <label>新垫料类型</label>
+            <input
+              value={deep.beddingType}
+              placeholder="纸棉 / 软木屑"
+              onChange={(e) => {
+                setDeep((p) => ({ ...p, beddingType: e.target.value }));
+                setDeepError('');
+              }}
+            />
           </div>
           <div className="field">
             <label>备注（可选）</label>
@@ -170,6 +220,7 @@ export function DailyCarePage() {
               onChange={(e) => setDeep((p) => ({ ...p, note: e.target.value }))}
             />
           </div>
+          {deepError && <div className="form-error" style={{ marginBottom: 10 }}>{deepError}</div>}
           <button className="btn btn-primary btn-block" type="submit">
             记一次整笼大扫除
           </button>
