@@ -1,0 +1,18 @@
+# 依赖
+node_modules/
+
+# 构建产物
+client/dist/
+server/dist/
+
+# 本地数据库
+server/data/
+
+# 系统与编辑器
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/
+
+# 日志
+*.log
